@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title data-i18n="archive_title">ЗАЛ ЭКСПОНАТОВ — ГАЛЕРЕЯ МУСИ И КЕТИ</title>
+  <meta name="description" content="Бесконечный каталог и зал экспонатов Галереи Муси и Кети: поиск по короткому номеру и исследование пространства.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <div class="logo-symbol">∞</div>
+        <div class="logo-text-wrap">
+          <span class="logo-title" data-i18n="site_name">ГАЛЕРЕЯ МУСИ И КЕТИ</span>
+          <span class="logo-badge" data-i18n="site_badge">БЕСКОНЕЧНЫЙ МУЗЕЙ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link" data-i18n="nav_gallery">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link active" data-i18n="nav_archive">ЗАЛ ЭКСПОНАТОВ</a>
+          <a href="about.html" class="nav-link" data-i18n="nav_about">О МУЗЕЕ</a>
+          <a href="tests.html" class="nav-link" data-i18n="nav_tests">ТЕСТЫ</a>
+        </nav>
+
+        <!-- Language Switcher Pill -->
+        <div class="lang-switch" role="group" aria-label="Выбор языка">
+          <button id="langBtnRu" class="lang-btn active" type="button">RU</button>
+          <span class="lang-divider">|</span>
+          <button id="langBtnEn" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 2rem; padding-bottom: 3.5rem;">
+    <!-- Archive Header with Cat Curators Mini Badge -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <div style="display: flex; align-items: center;">
+          <img src="assets/musya.jpg" alt="Муся" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-gold); box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+          <img src="assets/keti.jpg" alt="Кети" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-lavender); margin-left: -12px; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+        </div>
+        <div>
+          <h1 style="font-size: 1.4rem; font-weight: 800; letter-spacing: 0.04em;" data-i18n="archive_title">ЗАЛ ЭКСПОНАТОВ МУЗЕЯ</h1>
+          <p style="color: var(--text-muted); font-size: 0.8125rem;" data-i18n="archive_sub">Каталог зарегистрированных шедевров и исследование случайных секторов.</p>
+        </div>
+      </div>
+
+      <!-- Main Corridor Tabs: Catalog vs Random Explore -->
+      <div class="res-pill-switch" role="tablist">
+        <button id="tabCatalogBtn" class="res-pill-btn active" type="button" role="tab" style="padding: 0.35rem 0.95rem;">
+          📜 КАТАЛОГ ЭКСПОНАТОВ
+        </button>
+        <button id="tabRandomBtn" class="res-pill-btn" type="button" role="tab" style="padding: 0.35rem 0.95rem;">
+          🎲 СЛУЧАЙНЫЙ АРХИВ
+        </button>
+      </div>
+    </div>
+
+    <!-- =========================================
+         SECTION 1: SAVED EXHIBITS CATALOG VIEW
+         ========================================= -->
+    <section id="catalogSection">
+      <!-- Search & Filters Toolbar -->
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.5rem;">
+        <div style="flex: 1; min-width: 260px; display: flex; align-items: center; gap: 0.5rem; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0 0.75rem;">
+          <span style="color: var(--accent-lavender);">🔍</span>
+          <input type="text" id="catalogSearchInput" placeholder="Поиск по номеру (EXHIBIT #000000001) или названию..." style="width: 100%; height: 38px; background: transparent; border: none; outline: none; color: #fff; font-size: 0.8125rem; font-family: var(--font-sans);">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-family: var(--font-mono); font-size: 0.6875rem; color: var(--text-dim);">СЕКТОР:</span>
+          <div class="res-pill-switch" role="group">
+            <button id="catFilterAll" class="res-pill-btn active" type="button">ВСЕ</button>
+            <button id="catFilter32" class="res-pill-btn" type="button">32×32</button>
+            <button id="catFilter64" class="res-pill-btn" type="button">64×64</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Catalog Exhibits Grid -->
+      <div id="catalogGrid" class="explore-grid"></div>
+    </section>
+
+    <!-- =========================================
+         SECTION 2: RANDOM EXPLORE VIEW
+         ========================================= -->
+    <section id="randomSection" style="display: none;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.75rem 1rem;">
+        <span style="font-size: 0.8125rem; color: var(--text-muted);">
+          Генерация случайных картин через биективную перестановку Фейстеля
+        </span>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="res-pill-switch" role="group" aria-label="Выбор разрешения">
+            <button id="exploreRes32Btn" class="res-pill-btn active" type="button">32×32</button>
+            <button id="exploreRes64Btn" class="res-pill-btn" type="button">64×64</button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="exploreGenerateBtn" class="btn btn-primary btn-sm" type="button" data-i18n="archive_resample">
+              <span>🎲</span> ОБНОВИТЬ
+            </button>
+            <button id="exploreLoadMoreBtn" class="btn btn-secondary btn-sm" type="button" data-i18n="archive_load_more">
+              <span>＋</span> ЕЩЁ 12
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Random Exhibit Grid -->
+      <div id="galleryGrid" class="explore-grid"></div>
+    </section>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <aside class="mobile-bottom-bar" aria-label="Мобильная навигация">
+    <nav class="mobile-bottom-nav">
+      <a href="index.html" class="mob-nav-btn">
+        <span class="mob-icon">🐾</span>
+        <span data-i18n="nav_gallery">Галерея</span>
+      </a>
+      <a href="explore.html" class="mob-nav-btn active">
+        <span class="mob-icon">🔭</span>
+        <span data-i18n="nav_archive">Зал</span>
+      </a>
+      <a href="about.html" class="mob-nav-btn">
+        <span class="mob-icon">📖</span>
+        <span data-i18n="nav_about">О музее</span>
+      </a>
+      <a href="tests.html" class="mob-nav-btn">
+        <span class="mob-icon">🧪</span>
+        <span data-i18n="nav_tests">Тесты</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p data-i18n="footer_copy">ГАЛЕРЕЯ МУСИ И КЕТИ • БЕСКОНЕЧНЫЙ ЦИФРОВОЙ МУЗЕЙ</p>
+      <div class="footer-links">
+        <a href="index.html" data-i18n="nav_gallery">ГАЛЕРЕЯ</a>
+        <a href="explore.html" data-i18n="nav_archive">ЗАЛ ЭКСПОНАТОВ</a>
+        <a href="about.html" data-i18n="nav_about">О МУЗЕЕ</a>
+        <a href="tests.html" data-i18n="nav_tests">ТЕСТЫ</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="i18n.js"></script>
+  <script src="cat_data.js"></script>
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

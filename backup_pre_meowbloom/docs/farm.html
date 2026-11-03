@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ферма Муси и Кейти — Бесконечный цифровой музей</title>
+  <meta name="description" content="Уютная 2D-ферма и приключение кошек Муси и Кейти: исследуйте 6 биомов, выращивайте редкие травы, рубите лес, ловите лунную рыбу и открывайте реальные трофеи Вавилона.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="farm-2d-body">
+
+  <!-- Header -->
+  <header class="site-header game-site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <span class="logo-symbol">∞</span>
+        <div class="logo-text-wrap">
+          <span class="logo-title">ГАЛЕРЕЯ МУСИ И КЕЙТИ</span>
+          <span class="logo-badge">2D ФЕРМА КОТИКОВ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link">КАТАЛОГ</a>
+          <a href="farm.html" class="nav-link active">ФЕРМА 🐾🌾</a>
+          <a href="about.html" class="nav-link">О МУЗЕЕ</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Game Main Screen -->
+  <main class="game-viewport-container" id="gameViewportContainer">
+    
+    <!-- Game Canvas Viewport -->
+    <canvas id="gameCanvas" width="960" height="600"></canvas>
+
+    <!-- Floating Top HUD -->
+    <div class="game-hud-top" id="gameHudTop">
+      
+      <!-- Cat Profile & Active Switcher -->
+      <div class="hud-cat-pill" id="hudCatProfile" title="Нажмите Q для смены кошки">
+        <div class="hud-cat-avatar-wrap">
+          <img id="hudCatAvatar" src="assets/musya.jpg" alt="Активная кошка" class="hud-cat-avatar">
+          <span class="hud-cat-indicator" id="hudCatBadge">Муся</span>
+        </div>
+        <div class="hud-cat-info">
+          <div class="hud-cat-row">
+            <span class="hud-cat-name" id="hudCatName">Муся</span>
+            <span class="hud-lvl-tag" id="hudLvlTag">Lv 1</span>
+          </div>
+          <div class="hud-xp-track" title="Опыт">
+            <div class="hud-xp-fill" id="hudXpFill" style="width: 0%;"></div>
+          </div>
+          <div class="hud-perk-hint" id="hudPerkHint">🪵 +25% дерево/руда</div>
+        </div>
+        <button type="button" class="hud-swap-btn" id="hudSwapBtn" title="Сменить кошку (клавиша Q)">
+          <span class="swap-icon">🔄</span>
+          <span class="swap-key">Q</span>
+        </button>
+      </div>
+
+      <!-- Current Zone Banner -->
+      <div class="hud-zone-pill" id="hudZonePill">
+        <span class="zone-icon" id="hudZoneIcon">🏡</span>
+        <span class="zone-title" id="hudZoneTitle">Домашняя ферма</span>
+      </div>
+
+      <!-- Inventory & Quick Action Buttons -->
+      <div class="hud-actions-pill">
+        
+        <!-- Coins -->
+        <div class="hud-stat-chip" title="Золотые монеты">
+          <span class="chip-icon">🪙</span>
+          <span class="chip-val" id="hudCoins">0</span>
+        </div>
+
+        <!-- Backpack -->
+        <div class="hud-stat-chip clickable" id="hudBackpackChip" title="Вместимость рюкзака">
+          <span class="chip-icon">🎒</span>
+          <span class="chip-val"><span id="hudBackpackCount">0</span>/<span id="hudBackpackCap">30</span></span>
+        </div>
+
+        <!-- Modal Triggers -->
+        <div class="hud-buttons-row">
+          <button type="button" class="hud-tool-btn" id="openShopBtn" title="Лавка торговца Феликса">
+            <span>🏪</span>
+            <span class="hud-btn-lbl">Лавка</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openCollectionBtn" title="Журнал находок и редкостей">
+            <span>📖</span>
+            <span class="hud-btn-lbl">Коллекция</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openQuestsBtn" title="Задания и трофеи Вавилона">
+            <span>📜</span>
+            <span class="hud-btn-lbl">Задания</span>
+            <span class="hud-badge-dot" id="questAlertDot" style="display:none;"></span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openSettingsBtn" title="Меню, сохранения и экспорт">
+            <span>⚙️</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Pinned Mini-Quest Widget -->
+    <div class="hud-mini-quest" id="hudMiniQuest">
+      <div class="mini-quest-header">
+        <span class="quest-pin-icon">📌</span>
+        <strong id="miniQuestTitle">Первый урожай Кейти</strong>
+      </div>
+      <div class="mini-quest-desc" id="miniQuestDesc">Посадите и соберите кошачью мяту (0/3)</div>
+      <div class="mini-quest-reward" id="miniQuestReward">Награда: 🪙 20 • 30 XP</div>
+    </div>
+
+    <!-- Floating Dynamic Interaction Prompt -->
+    <div class="interaction-prompt" id="interactionPrompt" style="display: none;">
+      <span class="prompt-key" id="promptKey">E</span>
+      <span class="prompt-text" id="promptText">Взаимодействовать</span>
+    </div>
+
+    <!-- On-screen Floating Loot Notification Feed -->
+    <div class="loot-feed" id="lootFeed"></div>
+
+    <!-- Mobile Virtual Touch Controls -->
+    <div class="mobile-touch-layer" id="mobileTouchLayer">
+      <!-- Joystick -->
+      <div class="virtual-joystick-zone" id="joystickZone">
+        <div class="virtual-joystick-base" id="joystickBase">
+          <div class="virtual-joystick-thumb" id="joystickThumb"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="virtual-buttons-zone">
+        <button type="button" class="vbtn vbtn-swap" id="vbtnSwap" title="Смена кошки">🐱</button>
+        <button type="button" class="vbtn vbtn-action" id="vbtnAction" title="Действие (рубить / копать)">⚡</button>
+        <button type="button" class="vbtn vbtn-interact" id="vbtnInteract" title="Взаимодействие (Е)">🐾 E</button>
+      </div>
+    </div>
+
+    <!-- Quick Tooltip / Toast -->
+    <div class="game-toast" id="gameToast"></div>
+
+  </main>
+
+  <!-- =========================================
+       MODALS & DIALOGS
+       ========================================= -->
+
+  <!-- 1. Merchant Shop Modal -->
+  <div id="shopModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal shop-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🏪</span>
+          <div>
+            <h3 class="modal-title">Лавка торговца Феликса</h3>
+            <p class="modal-subtitle">Покупайте отборные семена, продавайте урожай и улучшайте кошачье снаряжение</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="shopModal">✕</button>
+      </div>
+
+      <div class="shop-tabs">
+        <button type="button" class="shop-tab active" data-shop-tab="sell">💰 Продажа урожая</button>
+        <button type="button" class="shop-tab" data-shop-tab="seeds">🌱 Покупка семян</button>
+        <button type="button" class="shop-tab" data-shop-tab="upgrades">⚡ Улучшение инструментов</button>
+      </div>
+
+      <!-- Shop Tab: Sell -->
+      <div class="shop-tab-content active" id="shopTabSell">
+        <div class="sell-header-actions">
+          <span>Ваш кошелёк: <strong class="gold-val">🪙 <span id="shopCoinsVal">0</span></strong></span>
+          <button type="button" class="btn btn-primary btn-sm" id="btnSellAll">💰 Продать всё ненужное</button>
+        </div>
+        <div class="shop-grid" id="sellItemsGrid"></div>
+      </div>
+
+      <!-- Shop Tab: Seeds -->
+      <div class="shop-tab-content" id="shopTabSeeds" style="display: none;">
+        <div class="shop-grid" id="seedsItemsGrid"></div>
+      </div>
+
+      <!-- Shop Tab: Upgrades -->
+      <div class="shop-tab-content" id="shopTabUpgrades" style="display: none;">
+        <div class="upgrades-list" id="toolUpgradesList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. Collector's Journal Modal -->
+  <div id="collectionModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal collection-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">📖</span>
+          <div>
+            <h3 class="modal-title">Журнал находок Муси и Кейти</h3>
+            <p class="modal-subtitle">Соберите полную коллекцию фауны, флоры и минералов бесконечного мира</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="collectionModal">✕</button>
+      </div>
+
+      <div class="collection-summary-bar">
+        <span>Открыто предметов: <strong id="collDiscoveredCount">0 / 24</strong></span>
+        <div class="rarity-legend">
+          <span class="rarity-badge common">⚪ Обычный</span>
+          <span class="rarity-badge uncommon">🟢 Необычный</span>
+          <span class="rarity-badge rare">🔵 Редкий</span>
+          <span class="rarity-badge epic">🟣 Эпический</span>
+          <span class="rarity-badge legendary">🟠 Легендарный</span>
+          <span class="rarity-badge mythic">🌟 Мифический</span>
+        </div>
+      </div>
+
+      <div class="collection-tabs">
+        <button type="button" class="shop-tab active" data-coll-tab="plants">🌾 Растения</button>
+        <button type="button" class="shop-tab" data-coll-tab="fish">🐟 Водные обитатели</button>
+        <button type="button" class="shop-tab" data-coll-tab="minerals">💎 Минералы и руды</button>
+        <button type="button" class="shop-tab" data-coll-tab="relics">🏺 Реликвии Вавилона</button>
+      </div>
+
+      <div class="collection-items-grid" id="collectionGrid"></div>
+    </div>
+  </div>
+
+  <!-- 3. Quests & Babel Trophies Modal -->
+  <div id="questsModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal quests-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">📜</span>
+          <div>
+            <h3 class="modal-title">Задания и Экспонаты Вавилона</h3>
+            <p class="modal-subtitle">Выполняйте великие достижения Муси и Кейти, чтобы открыть подлинные математические трофеи музея</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="questsModal">✕</button>
+      </div>
+
+      <div class="quests-layout">
+        
+        <!-- Story / Daily Quests -->
+        <div class="quests-column">
+          <h4 class="quests-col-title">🐾 Текущие поручения</h4>
+          <div class="quests-list" id="questsList"></div>
+        </div>
+
+        <!-- Milestone Babel Trophies -->
+        <div class="trophies-column">
+          <h4 class="quests-col-title">🏆 Математические Трофеи Вавилона</h4>
+          <p class="trophies-col-desc">Каждый трофей имеет уникальный Feistel-SPN адрес в библиотеке и может быть осмотрен в основном зале Галереи.</p>
+          <div class="trophies-list" id="trophiesList"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Inventory / Backpack Modal -->
+  <div id="inventoryModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal inventory-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🎒</span>
+          <div>
+            <h3 class="modal-title">Походный рюкзак Муси и Кейти</h3>
+            <p class="modal-subtitle">Занято места: <strong id="invCapacityLabel">0 / 30</strong></p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="inventoryModal">✕</button>
+      </div>
+
+      <div class="inventory-grid" id="inventoryGrid"></div>
+
+      <div class="inventory-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnOpenShopFromInv">🏪 Перейти в лавку для продажи</button>
+        <button type="button" class="btn btn-subtle btn-sm" data-close-modal="inventoryModal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Settings, Saves & JSON Export/Import Modal -->
+  <div id="settingsModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal settings-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">⚙️</span>
+          <div>
+            <h3 class="modal-title">Управление игрой и сохранениями</h3>
+            <p class="modal-subtitle">Игра автоматически сохраняется в вашем браузере. Вы также можете экспортировать сохранение в файл.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="settingsModal">✕</button>
+      </div>
+
+      <div class="settings-content">
+        
+        <div class="settings-card">
+          <h4>💾 Быстрое сохранение</h4>
+          <p>Последнее автосохранение: <span id="lastSaveTimeText">Только что</span></p>
+          <div class="settings-btn-row">
+            <button type="button" class="btn btn-primary btn-sm" id="btnManualSave">Сохранить прогресс сейчас</button>
+            <button type="button" class="btn btn-danger btn-sm" id="btnResetSave">Сбросить игру с начала</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h4>📦 Экспорт / Импорт сохранения (JSON)</h4>
+          <p>Скопируйте текст для переноса на другое устройство или вставьте сохранённый код:</p>
+          <textarea id="saveJsonTextarea" class="save-textarea" placeholder="Нажмите 'Экспорт', чтобы сгенерировать JSON код..."></textarea>
+          <div class="settings-btn-row">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnExportSave">📋 Экспортировать в текст</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnImportSave">📥 Загрузить из текста</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h4>🎮 Управление на ПК:</h4>
+          <ul class="controls-list">
+            <li><strong>WASD / Стрелки</strong> — Перемещение по миру</li>
+            <li><strong>E</strong> — Взаимодействие (посадить семена, полить, собрать урожай, рыбачить, торговец)</li>
+            <li><strong>Пробел (Space)</strong> — Действие инструментом (рубить деревья топором, добывать руду киркой)</li>
+            <li><strong>Q</strong> — Переключение между Мусей и Кейти</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Milestone Trophy Celebration Modal -->
+  <div id="trophyModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal trophy-celebration-modal">
+      <div class="celebration-particles">✨ 🏆 ✨</div>
+      <h3 class="celebration-title" id="celebrationTitle">Трофей разблокирован!</h3>
+      <p class="celebration-subtitle" id="celebrationSubtitle">Великое достижение Муси и Кейти открыло новый шедевр в галерее Вавилона</p>
+      
+      <div class="celebration-artwork-box">
+        <canvas id="trophyPreviewCanvas" width="128" height="128"></canvas>
+      </div>
+
+      <div class="celebration-meta">
+        <span class="rarity-badge mythic" id="trophyRarityBadge">🌟 Мифический Экспонат</span>
+        <code class="trophy-id-pill" id="trophyIdPill">b32_...</code>
+      </div>
+
+      <div class="celebration-actions">
+        <a id="trophyGalleryLink" href="index.html" class="btn btn-primary">🖼 Осмотреть в Галерее</a>
+        <button type="button" class="btn btn-secondary" data-close-modal="trophyModal">Продолжить игру</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seed Planting Selector Popup (Floating near plot) -->
+  <div id="seedSelectorPopup" class="seed-selector-popup" style="display: none;">
+    <div class="seed-popup-header">Выберите семена для посадки:</div>
+    <div class="seed-options-list" id="seedOptionsList"></div>
+    <button type="button" class="seed-popup-cancel" id="cancelSeedSelect">Отмена</button>
+  </div>
+
+  <!-- Scripts -->
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="cat_data.js"></script>
+  <script src="catalog.js"></script>
+  <script src="farm_game.js"></script>
+</body>
+</html>

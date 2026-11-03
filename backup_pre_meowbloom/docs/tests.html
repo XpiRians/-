@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>BABEL PERMUTATION VERIFICATION SUITE — Infinite Gallery</title>
+  <meta name="description" content="Automated verification of Bijective Pseudorandom Permutation, avalanche effect, and backwards compatibility.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    .test-suite {
+      max-width: 860px;
+      margin: 2rem auto 4rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+    }
+    .test-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+    }
+    .test-item:last-child {
+      border-bottom: none;
+    }
+    .test-status {
+      padding: 0.2rem 0.6rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .status-pass {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-fail {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+    .status-running {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <div class="logo-symbol">∞</div>
+        <div class="logo-text-wrap">
+          <span class="logo-title" data-i18n="site_name">ГАЛЕРЕЯ МУСИ И КЕТИ</span>
+          <span class="logo-badge" data-i18n="site_badge">БЕСКОНЕЧНЫЙ МУЗЕЙ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link">КАТАЛОГ</a>
+          <a href="farm.html" class="nav-link">ФЕРМА 🐾🌾</a>
+          <a href="about.html" class="nav-link">О МУЗЕЕ</a>
+          <a href="tests.html" class="nav-link active">ТЕСТЫ</a>
+        </nav>
+
+        <!-- Language Switcher Pill -->
+        <div class="lang-switch" role="group" aria-label="Выбор языка">
+          <button id="langBtnRu" class="lang-btn active" type="button">RU</button>
+          <span class="lang-divider">|</span>
+          <button id="langBtnEn" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="test-suite">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+          <h2>BIJECTIVE PERMUTATION VERIFICATION SUITE</h2>
+          <p style="color: var(--text-secondary); font-size: 0.875rem;">Verifying Feistel PRP, 50% avalanche effect, address stepping, and legacy compatibility.</p>
+        </div>
+        <button id="runTestsBtn" class="btn btn-primary btn-sm">RE-RUN ALL TESTS</button>
+      </div>
+
+      <div id="testSummary" class="alert-banner" style="display: none; margin-bottom: 1.5rem;"></div>
+
+      <div id="testResultsList" style="background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+        <div class="test-item">
+          <span>Initializing test harness...</span>
+          <span class="test-status status-running">RUNNING</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>INFINITE GALLERY • BIJECTIVE PSEUDORANDOM PERMUTATION VERIFICATION</p>
+      <div class="footer-links">
+        <a href="index.html">GALLERY</a>
+        <a href="explore.html">ARCHIVE</a>
+        <a href="about.html">ABOUT</a>
+        <a href="tests.html">TESTS</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+    async function runTestSuite() {
+      const list = document.getElementById('testResultsList');
+      const summary = document.getElementById('testSummary');
+      list.innerHTML = '';
+      
+      let passed = 0;
+      let failed = 0;
+
+      function record(testName, isSuccess, details = '') {
+        if (isSuccess) passed++; else failed++;
+        const row = document.createElement('div');
+        row.className = 'test-item';
+        row.innerHTML = `
+          <div>
+            <strong>${escapeHtml(testName)}</strong>
+            ${details ? `<div style="color:var(--text-secondary); font-size:0.75rem; margin-top:2px;">${escapeHtml(details)}</div>` : ''}
+          </div>
+          <span class="test-status ${isSuccess ? 'status-pass' : 'status-fail'}">${isSuccess ? 'PASS' : 'FAIL'}</span>
+        `;
+        list.appendChild(row);
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      // Test 1: Feistel Permutation Bijection (32 and 64)
+      try {
+        const p = BabelPermutation;
+        const b32 = new Uint8Array(4096);
+        for (let i = 0; i < 4096; i++) b32[i] = (i * 17) & 0xFF;
+        const perm32 = p.permuteBytes(b32);
+        const rest32 = p.invertPermuteBytes(perm32);
+        let match32 = true;
+        for (let i = 0; i < 4096; i++) {
+          if (b32[i] !== rest32[i]) { match32 = false; break; }
+        }
+
+        const b64 = new Uint8Array(16384);
+        for (let i = 0; i < 16384; i++) b64[i] = (i * 31) & 0xFF;
+        const perm64 = p.permuteBytes(b64);
+        const rest64 = p.invertPermuteBytes(perm64);
+        let match64 = true;
+        for (let i = 0; i < 16384; i++) {
+          if (b64[i] !== rest64[i]) { match64 = false; break; }
+        }
+
+        record('Feistel-SPN Permutation Lossless Bijection (32 & 64)', match32 && match64, 'Zero data loss during forward and inverse Feistel rounds');
+      } catch (e) {
+        record('Feistel Bijection', false, e.message);
+      }
+
+      // Test 2: Avalanche Effect (Adjacent address stepping)
+      try {
+        const id1 = InfiniteGalleryGenerator.generateRandomId(32, true);
+        const id2 = InfiniteGalleryGenerator.stepAddress(id1, 1);
+        const p1 = InfiniteGalleryDecoder.idToBytes(id1);
+        const p2 = InfiniteGalleryDecoder.idToBytes(id2);
+        let diffBytes = 0;
+        for (let i = 0; i < 4096; i++) {
+          if (p1[i] !== p2[i]) diffBytes++;
+        }
+        const diffRatio = diffBytes / 4096;
+        record('Avalanche Effect on Address +1', diffRatio > 0.90, `Adjacent address flipped ${diffBytes}/4096 bytes (${(diffRatio*100).toFixed(1)}%)`);
+      } catch (e) {
+        record('Avalanche Effect', false, e.message);
+      }
+
+      // Test 3: Address Stepping Inversion (+10 then -10)
+      try {
+        const origId = InfiniteGalleryGenerator.generateRandomId(32, true);
+        const nextId = InfiniteGalleryGenerator.stepAddress(origId, 10);
+        const backId = InfiniteGalleryGenerator.stepAddress(nextId, -10);
+        record('Address Stepping Reversibility (Delta +/-10)', origId === backId, 'Adjacent traversal preserves exact coordinate continuity');
+      } catch (e) {
+        record('Address Stepping', false, e.message);
+      }
+
+      // Test 4: Test Vectors (Python Parity)
+      try {
+        const resp = await fetch('test_vectors.json');
+        if (!resp.ok) throw new Error('Could not fetch test_vectors.json');
+        const data = await resp.json();
+
+        for (const v of data.vectors) {
+          const { bytes, resolution } = InfiniteGalleryDecoder.idToBytesAndResolution(v.id);
+          let match = (resolution === v.resolution);
+          for (let i = 0; i < v.sample_pixel_bytes.length; i++) {
+            if (bytes[i] !== v.sample_pixel_bytes[i]) { match = false; break; }
+          }
+          record(`Vector [${v.type}]: ${v.name}`, match, `Pixel parity confirmed with Python (${v.id.slice(0, 16)}...)`);
+        }
+      } catch (e) {
+        record('Vector Verification', false, e.message);
+      }
+
+      // Test 5: Legacy 32x32 Raw ID Compatibility
+      try {
+        const rawPixels = new Uint8Array(4096);
+        rawPixels.fill(128);
+        const legacyId = InfiniteGalleryEncoder.bytesToId(rawPixels, 32, null, false);
+        const dec = InfiniteGalleryDecoder.idToBytesAndResolution(legacyId);
+        let match = (dec.resolution === 32 && !dec.isBabel);
+        for (let i = 0; i < 4096; i++) {
+          if (dec.bytes[i] !== 128) { match = false; break; }
+        }
+        record('Legacy Raw 32×32 ID Compatibility', match, 'Raw Base64 IDs decode losslessly without permutation');
+      } catch (e) {
+        record('Legacy Compatibility', false, e.message);
+      }
+
+      // Summary
+      summary.style.display = 'block';
+      if (failed === 0) {
+        summary.className = 'alert-banner alert-info';
+        summary.style.borderLeftColor = 'var(--status-success)';
+        summary.style.background = 'rgba(16, 185, 129, 0.08)';
+        summary.style.color = '#6ee7b7';
+        summary.innerHTML = `<strong>✓ ALL TESTS PASSED (${passed}/${passed + failed})</strong>: Bijective Pseudorandom Permutation, stepping, and backward compatibility verified!`;
+      } else {
+        summary.className = 'alert-banner alert-error';
+        summary.innerHTML = `<strong>✕ TEST FAILURES DETECTED:</strong> ${passed} passed, ${failed} failed.`;
+      }
+    }
+
+    document.getElementById('runTestsBtn').addEventListener('click', runTestSuite);
+    document.addEventListener('DOMContentLoaded', runTestSuite);
+  </script>
+</body>
+</html>

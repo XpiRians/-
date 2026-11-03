@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Мяуцвет — Тайна Великого Сада | Бесконечный цифровой музей Муси и Кейти</title>
+  <meta name="description" content="Большое 2D-приключение кошек Муси и Кейти: восстанавливайте 6 биомов Великого сада, собирайте пыльцу, выводите гибриды растений, приручайте волшебных помощников и откройте 6 осколков Первосемени.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="farm-2d-body">
+
+  <!-- Header -->
+  <header class="site-header game-site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <span class="logo-symbol">∞</span>
+        <div class="logo-text-wrap">
+          <span class="logo-title">ГАЛЕРЕЯ МУСИ И КЕЙТИ</span>
+          <span class="logo-badge">МЯУЦВЕТ • ТАЙНА ВЕЛИКОГО САДА</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link">КАТАЛОГ</a>
+          <a href="farm.html" class="nav-link active">МЯУЦВЕТ 🌸🐾</a>
+          <a href="about.html" class="nav-link">О МУЗЕЕ</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Master Game Viewport Container -->
+  <main class="game-viewport-container" id="gameViewportContainer">
+    
+    <!-- Game Canvas Viewport -->
+    <canvas id="gameCanvas" width="960" height="600"></canvas>
+
+    <!-- Top HUD Floating Layer -->
+    <div class="game-hud-top" id="gameHudTop">
+      
+      <!-- 1. Cat Profile & Switcher -->
+      <div class="hud-cat-pill" id="hudCatProfile" title="Клавиша Q — смена кошки">
+        <div class="hud-cat-avatar-wrap">
+          <img id="hudCatAvatar" src="assets/musya.jpg" alt="Активная кошка" class="hud-cat-avatar">
+          <span class="hud-cat-indicator" id="hudCatBadge">Муся</span>
+        </div>
+        <div class="hud-cat-info">
+          <div class="hud-cat-row">
+            <span class="hud-cat-name" id="hudCatName">Муся</span>
+            <span class="hud-lvl-tag" id="hudLvlTag">Lv 1</span>
+          </div>
+          <div class="hud-xp-track" title="Опыт">
+            <div class="hud-xp-fill" id="hudXpFill" style="width: 0%;"></div>
+          </div>
+          <div class="hud-perk-hint" id="hudPerkHint">🪵 +25% дерево/руда</div>
+        </div>
+        <button type="button" class="hud-swap-btn" id="hudSwapBtn" title="Сменить кошку (клавиша Q)">
+          <span class="swap-icon">🔄</span>
+          <span class="swap-key">Q</span>
+        </button>
+      </div>
+
+      <!-- 2. Time & Weather & Combo Banner -->
+      <div class="hud-center-group">
+        <div class="hud-zone-pill" id="hudTimeWeatherPill">
+          ☀️ День • ☀️ Ясно
+        </div>
+        <!-- Combo Pill -->
+        <div class="hud-combo-pill" id="hudComboPill" style="display: none;">
+          <span class="combo-icon">⚡</span>
+          <span class="combo-text">КОМБО: <strong id="hudComboCount">0</strong> (<span id="hudComboMultiplier">x1.25</span>)</span>
+        </div>
+      </div>
+
+      <!-- 3. Resources & Action Modals -->
+      <div class="hud-actions-pill">
+        
+        <!-- Coins -->
+        <div class="hud-stat-chip" title="Золотые монеты">
+          <span class="chip-icon">🪙</span>
+          <span class="chip-val" id="hudCoins">60</span>
+        </div>
+
+        <!-- Water In Can -->
+        <div class="hud-stat-chip" title="Вода в лейке">
+          <span class="chip-icon">🪣</span>
+          <span class="chip-val" id="hudWaterCan">12/12</span>
+        </div>
+
+        <!-- Backpack -->
+        <div class="hud-stat-chip" title="Вместимость рюкзака">
+          <span class="chip-icon">🎒</span>
+          <span class="chip-val"><span id="hudBackpackCount">0</span>/<span id="hudBackpackCap">35</span></span>
+        </div>
+
+        <!-- Action Triggers -->
+        <div class="hud-buttons-row">
+          <button type="button" class="hud-tool-btn" id="openShopBtn" title="Лавка торговца Феликса">
+            <span>🏪</span>
+            <span class="hud-btn-lbl">Лавка</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openWorkshopBtn" title="Кулинария и Мастерская">
+            <span>🍳</span>
+            <span class="hud-btn-lbl">Кухня</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openHelpersBtn" title="Помощники и Питомцы">
+            <span>🐾</span>
+            <span class="hud-btn-lbl">Спутники</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openSkillTreeBtn" title="Дерево навыков сада">
+            <span>🌳</span>
+            <span class="hud-btn-lbl">Навыки</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openOrderBoardBtn" title="Доска заказов">
+            <span>📋</span>
+            <span class="hud-btn-lbl">Заказы</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openCollectionBtn" title="Энциклопедия флоры и минералов">
+            <span>📖</span>
+            <span class="hud-btn-lbl">Книга</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openQuestsBtn" title="Сюжетные главы и осколки Первосемени">
+            <span>📜</span>
+            <span class="hud-btn-lbl">Сюжет</span>
+          </button>
+          <button type="button" class="hud-tool-btn" id="openSettingsBtn" title="Звук, настройки и сохранения">
+            <span>⚙️</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Pinned Mini-Quest Tracker -->
+    <div class="hud-mini-quest" id="hudMiniQuest">
+      <div class="mini-quest-header">
+        <span class="quest-pin-icon">📌</span>
+        <strong id="miniQuestTitle">Глава 1: Пробуждение Первосемени</strong>
+      </div>
+      <div class="mini-quest-desc" id="miniQuestDesc">Соберите 30 солнечной пыльцы на ромашковой поляне (0/30)</div>
+      <div class="mini-quest-reward" id="miniQuestReward">Награда: Активация Осколка Солнца</div>
+    </div>
+
+    <!-- Dynamic Context Prompt -->
+    <div class="interaction-prompt" id="interactionPrompt" style="display: none;">
+      <span class="prompt-key" id="promptKey">E</span>
+      <span class="prompt-text" id="promptText">Взаимодействовать</span>
+    </div>
+
+    <!-- Mobile Virtual Touch Controls -->
+    <div class="mobile-touch-layer" id="mobileTouchLayer">
+      <div class="virtual-joystick-zone" id="joystickZone">
+        <div class="virtual-joystick-base" id="joystickBase">
+          <div class="virtual-joystick-thumb" id="joystickThumb"></div>
+        </div>
+      </div>
+      <div class="virtual-buttons-zone">
+        <button type="button" class="vbtn vbtn-swap" id="vbtnSwap" title="Смена кошки">🐱</button>
+        <button type="button" class="vbtn vbtn-action" id="vbtnAction" title="Действие инструментом (Пробел)">⚡</button>
+        <button type="button" class="vbtn vbtn-interact" id="vbtnInteract" title="Взаимодействие (Е)">🐾 E</button>
+      </div>
+    </div>
+
+    <!-- Floating Game Toast -->
+    <div class="game-toast" id="gameToast"></div>
+
+  </main>
+
+  <!-- =========================================
+       MODALS & DIALOGS
+       ========================================= -->
+
+  <!-- 1. Felix Shop Modal -->
+  <div id="shopModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal shop-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🏪</span>
+          <div>
+            <h3 class="modal-title">Лавка торговца Феликса</h3>
+            <p class="modal-subtitle">Покупайте семена, продавайте урожай и заказывайте инструменты</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="shopModal">✕</button>
+      </div>
+
+      <div class="shop-tabs">
+        <button type="button" class="shop-tab active" data-shop-tab="sell">💰 Продажа урожая</button>
+        <button type="button" class="shop-tab" data-shop-tab="seeds">🌱 Покупка семян</button>
+      </div>
+
+      <!-- Sell Tab -->
+      <div class="shop-tab-content active" id="shopTabSell">
+        <div class="shop-grid" id="sellItemsGrid"></div>
+      </div>
+
+      <!-- Seeds Tab -->
+      <div class="shop-tab-content" id="shopTabSeeds" style="display: none;">
+        <div class="shop-grid" id="seedsItemsGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Cooking & Workshop Modal -->
+  <div id="workshopModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🍳</span>
+          <div>
+            <h3 class="modal-title">Кулинария и Мастерская Великого Сада</h3>
+            <p class="modal-subtitle">Готовьте изысканные блюда, дарующие котикам временные ускорения и бонусы</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="workshopModal">✕</button>
+      </div>
+      <div class="upgrades-list" id="cookingList"></div>
+    </div>
+  </div>
+
+  <!-- 3. Helpers / Pets Modal -->
+  <div id="helpersModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🐾</span>
+          <div>
+            <h3 class="modal-title">Волшебные Помощники Сада</h3>
+            <p class="modal-subtitle">Приручайте маленьких духов, собирающих пыльцу и помогающих в шахтах и на озере</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="helpersModal">✕</button>
+      </div>
+      <div class="collection-items-grid" id="helpersGrid"></div>
+    </div>
+  </div>
+
+  <!-- 4. Skill Tree Modal -->
+  <div id="skillsModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">🌳</span>
+          <div>
+            <h3 class="modal-title">Древо Талантов Садовода</h3>
+            <p class="modal-subtitle">Доступно очков навыков: <strong class="gold-val" id="skillPointsCount">0</strong></p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="skillsModal">✕</button>
+      </div>
+      <div class="settings-content" id="skillTreeList"></div>
+    </div>
+  </div>
+
+  <!-- 5. Order Board Modal -->
+  <div id="ordersModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">📋</span>
+          <div>
+            <h3 class="modal-title">Доска Заказов Жителей</h3>
+            <p class="modal-subtitle">Выполняйте поставки трав, древесины и руды за щедрые награды</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="ordersModal">✕</button>
+      </div>
+      <div class="quests-list" id="ordersList"></div>
+    </div>
+  </div>
+
+  <!-- 6. Encyclopedia Modal -->
+  <div id="encyclopediaModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">📖</span>
+          <div>
+            <h3 class="modal-title">Энциклопедия Флоры и Минералов</h3>
+            <p class="modal-subtitle">30+ уникальных растений, мутации, руды и редкие обитатели глубин</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="encyclopediaModal">✕</button>
+      </div>
+      <div class="collection-items-grid" id="encyclopediaGrid"></div>
+    </div>
+  </div>
+
+  <!-- 7. Story Chapters & Shards Modal -->
+  <div id="questsModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">📜</span>
+          <div>
+            <h3 class="modal-title">Главы Сюжета и Осколки Первосемени</h3>
+            <p class="modal-subtitle">Соберите 6 осколков по всем биомам, чтобы вернуть Великому саду первозданную магию</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="questsModal">✕</button>
+      </div>
+      <div class="quests-list" id="chaptersList"></div>
+    </div>
+  </div>
+
+  <!-- 8. Settings & Audio Modal -->
+  <div id="settingsModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <span class="modal-icon">⚙️</span>
+          <div>
+            <h3 class="modal-title">Настройки игры и Звука</h3>
+            <p class="modal-subtitle">Управление атмосферной музыкой и сохранённым прогрессом</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="settingsModal">✕</button>
+      </div>
+      <div class="settings-content">
+        <div class="settings-card">
+          <h4>🔊 Звуковое окружение</h4>
+          <p>Процедурная фоновая музыка подстраивается под каждый биом и время суток.</p>
+          <div class="settings-btn-row">
+            <button type="button" class="btn btn-primary btn-sm" id="btnToggleMute">🔊 Звук включен</button>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h4>💾 Сохранения</h4>
+          <p>Игра сохраняется автоматически каждые несколько секунд в памяти браузера.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Tutorial Dialogue Cutscene Modal -->
+  <div id="tutorialModal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-window game-modal tutorial-modal">
+      <div class="tutorial-speaker-wrap">
+        <img id="tutSpeakerAvatar" src="assets/musya.jpg" alt="Говорящий" class="tutorial-avatar">
+        <strong id="tutSpeakerName" class="tutorial-speaker-name">Муся</strong>
+      </div>
+      <div class="tutorial-content">
+        <h4 id="tutTitle" class="tutorial-title">Пробуждение</h4>
+        <p id="tutBodyText" class="tutorial-text">...</p>
+        <button type="button" class="btn btn-primary btn-sm" data-close-modal="tutorialModal">Понятно, вперёд! 🐾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seed Selector Popup -->
+  <div id="seedSelectorPopup" class="seed-selector-popup" style="display: none;">
+    <div class="seed-popup-header">Выберите семена для посадки:</div>
+    <div class="seed-options-list" id="seedOptionsList"></div>
+    <button type="button" class="seed-popup-cancel" onclick="document.getElementById('seedSelectorPopup').style.display='none'">Отмена</button>
+  </div>
+
+  <!-- Mathematical Core & Game Scripts -->
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="cat_data.js"></script>
+  <script src="catalog.js"></script>
+
+  <!-- MeowBloom Modular Architecture Scripts -->
+  <script src="farm_data.js"></script>
+  <script src="farm_audio.js"></script>
+  <script src="farm_engine.js"></script>
+  <script src="farm_render.js"></script>
+  <script src="farm_ui.js"></script>
+  <script src="farm_game.js"></script>
+</body>
+</html>

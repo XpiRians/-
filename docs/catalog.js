@@ -1,7 +1,7 @@
 /**
  * MUSYA & KETI: INFINITE GALLERY - Catalog Module (JavaScript ES6+)
  * Manages the Catalog of Saved Exhibits with sequential short numbers (e.g. EXHIBIT #000000001),
- * title annotations, persistence via localStorage, and dual search (By Full ID and By Short Number).
+ * title annotations, persistence via localStorage, deletion, import/export, and dual search.
  */
 
 (function (global) {
@@ -108,6 +108,14 @@
     return Array.from(map.values()).sort((a, b) => a.number - b.number);
   }
 
+  function getMyExhibits() {
+    return getCustomExhibits().sort((a, b) => a.number - b.number);
+  }
+
+  function getSeedExhibits() {
+    return SEED_EXHIBITS.slice();
+  }
+
   function findByNumber(numOrStr) {
     const num = parseExhibitNumber(numOrStr);
     if (!num) return null;
@@ -142,6 +150,7 @@
       title_en: exhibit.title_en || `Exhibit #${String(num).padStart(9, '0')}`,
       id: exhibit.id.trim(),
       resolution: exhibit.resolution || 32,
+      category: exhibit.category || 'user',
       savedAt: Date.now()
     };
 
@@ -152,7 +161,73 @@
     return newEntry;
   }
 
-  // Generate canonical stepping exhibits from seed 1 if not present
+  function deleteExhibit(numOrStr) {
+    const num = typeof numOrStr === 'number' ? numOrStr : parseExhibitNumber(numOrStr);
+    if (!num) return false;
+
+    // Seeds 1-4 cannot be deleted (core curators)
+    if (num >= 1 && num <= 4) {
+      throw new Error('Канонические экспонаты Муси и Кейти нельзя удалить из музея.');
+    }
+
+    const custom = getCustomExhibits();
+    const beforeLen = custom.length;
+    const filtered = custom.filter(e => e.number !== num);
+    if (filtered.length === beforeLen) return false;
+
+    setCustomExhibits(filtered);
+    return true;
+  }
+
+  function exportCatalogJSON() {
+    const all = getAllExhibits();
+    const exportData = {
+      project: "MUSYA & KETI: INFINITE GALLERY",
+      version: "3.0-minimal",
+      exportedAt: new Date().toISOString(),
+      exhibitsCount: all.length,
+      exhibits: all
+    };
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  function importCatalogJSON(jsonString) {
+    try {
+      const parsed = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+      const list = Array.isArray(parsed) ? parsed : (parsed.exhibits && Array.isArray(parsed.exhibits) ? parsed.exhibits : null);
+      if (!list) {
+        throw new Error('Некорректный формат JSON: ожидается массив экспонатов.');
+      }
+
+      let importedCount = 0;
+      const custom = getCustomExhibits();
+      const customMap = new Map(custom.map(e => [e.number, e]));
+
+      for (const item of list) {
+        if (!item || !item.id || typeof item.id !== 'string') continue;
+        const validNum = Number(item.number);
+        if (!Number.isFinite(validNum) || validNum <= 4) continue; // skip overriding core seeds 1-4
+
+        customMap.set(validNum, {
+          number: validNum,
+          title_ru: item.title_ru || `Экспонат #${String(validNum).padStart(9, '0')}`,
+          title_en: item.title_en || `Exhibit #${String(validNum).padStart(9, '0')}`,
+          id: item.id.trim(),
+          resolution: item.resolution || (item.id.startsWith('b64_') ? 64 : 32),
+          category: item.category || 'imported',
+          savedAt: item.savedAt || Date.now()
+        });
+        importedCount++;
+      }
+
+      setCustomExhibits(Array.from(customMap.values()));
+      return { success: true, count: importedCount };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  // Pre-seed canonical range 5..12 if needed
   function ensureDefaultSteppingRange(maxSeed = 12) {
     const all = getAllExhibits();
     const musya = all.find(e => e.number === 1);
@@ -185,7 +260,6 @@
     }
   }
 
-  // Pre-seed on load
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(ensureDefaultSteppingRange, 100);
   });
@@ -194,9 +268,14 @@
     formatExhibitNumber,
     parseExhibitNumber,
     getAllExhibits,
+    getMyExhibits,
+    getSeedExhibits,
     findByNumber,
     findById,
-    saveExhibit
+    saveExhibit,
+    deleteExhibit,
+    exportCatalogJSON,
+    importCatalogJSON
   };
 
   global.InfiniteGalleryCatalog = InfiniteGalleryCatalog;

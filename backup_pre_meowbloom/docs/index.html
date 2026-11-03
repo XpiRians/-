@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Галерея Муси и Кейти — Бесконечный цифровой музей</title>
+  <meta name="description" content="Бесконечная цифровая галерея изображений Муси и Кейти: обратимая математическая адресация каждого возможного изображения в пространстве Вавилона.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Minimal Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <span class="logo-symbol">∞</span>
+        <div class="logo-text-wrap">
+          <span class="logo-title">ГАЛЕРЕЯ МУСИ И КЕЙТИ</span>
+          <span class="logo-badge">БЕСКОНЕЧНЫЙ МУЗЕЙ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link active">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link">КАТАЛОГ</a>
+          <a href="farm.html" class="nav-link">ФЕРМА 🐾🌾</a>
+          <a href="about.html" class="nav-link">О МУЗЕЕ</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Minimalist Gallery Stage -->
+  <main class="container gallery-minimal-main">
+    <div class="gallery-stage-card">
+
+      <!-- Top Meta Bar: Exhibit #, Resolution Switcher (32x32 / 64x64), Short ID, Share -->
+      <div class="stage-meta-bar">
+        <span id="exhibitNum" class="exhibit-badge">ЭКСПОНАТ #000000001</span>
+
+        <!-- Resolution Switcher: Prominently on the main screen -->
+        <div class="res-switcher" role="group" aria-label="Выбор сектора матрицы">
+          <button id="resBtn32" class="res-switch-btn active" type="button" title="Сектор 32×32 (1024 пикселя)">32×32</button>
+          <button id="resBtn64" class="res-switch-btn" type="button" title="Сектор 64×64 (4096 пикселей)">64×64</button>
+        </div>
+
+        <!-- ID with Click to Copy -->
+        <button id="stageCopyIdBtn" class="stage-id-pill" type="button" title="Нажмите, чтобы скопировать полный ID">
+          <span id="stageShortId">b32_...</span>
+          <span id="copyIcon">📋</span>
+          <span id="copyInlineFeedback" class="copy-inline-badge" style="display: none;">Скопировано ✓</span>
+        </button>
+
+        <!-- Share Link Directly on Main Screen -->
+        <button id="stageShareBtn" class="stage-action-pill" type="button" title="Поделиться ссылкой на этот экспонат">
+          <span>🔗</span> <span>Поделиться</span>
+          <span id="shareInlineFeedback" class="copy-inline-badge" style="display: none;">Ссылка скопирована ✓</span>
+        </button>
+      </div>
+
+      <!-- Artwork Canvas Frame -->
+      <div class="artwork-frame">
+        <canvas id="artworkCanvas" class="artwork-canvas" width="440" height="440"></canvas>
+      </div>
+
+      <!-- Essential Navigation Traversal Row -->
+      <div class="traversal-deck">
+        <button id="stepMinus10" class="nav-btn nav-btn-step" type="button" title="Перейти на 10 экспонатов назад">-10</button>
+        <button id="prevBtn" class="nav-btn" type="button" title="Предыдущий экспонат (←)">← Назад</button>
+        <button id="randomBtn" class="nav-btn nav-btn-random" type="button" title="Случайный экспонат в текущем разрешении (Пробел / R)">🎲 Случайный</button>
+        <button id="nextBtn" class="nav-btn" type="button" title="Следующий экспонат (→)">Вперёд →</button>
+        <button id="stepPlus10" class="nav-btn nav-btn-step" type="button" title="Перейти на 10 экспонатов вперёд">+10</button>
+        <button id="openSearchBtn" class="nav-btn" type="button" title="Поиск по ID или номеру">🔍 Поиск</button>
+
+        <!-- Secondary Actions Dropdown (⋯ Ещё) -->
+        <div class="actions-dropdown-wrap">
+          <button id="actionsToggleBtn" class="nav-btn" type="button" title="Второстепенные действия">⋯ Ещё</button>
+          <div id="actionsMenu" class="actions-menu">
+            <button id="menuSaveCatalog" class="action-menu-item" type="button">⭐ В каталог</button>
+            <button id="menuDownloadHd" class="action-menu-item" type="button">💾 Скачать HD (PNG)</button>
+            <button id="menuMusyaPortrait" class="action-menu-item" type="button">🐾 Портрет Муси</button>
+            <button id="menuKetiPortrait" class="action-menu-item" type="button">🐾 Портрет Кейти</button>
+            <button id="menuLocatePhoto" class="action-menu-item" type="button">📷 Загрузить / Вставить фото</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Unified Search Modal (By Full ID or By Short Number with Auto Resolution) -->
+  <div id="searchModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>🔍 Поиск экспоната</span></h3>
+        <button id="searchCloseBtn" class="modal-close-btn" type="button">&times;</button>
+      </div>
+
+      <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        Введите номер сохранённого экспоната (например, <strong>1</strong> или <strong>#000000002</strong>) или вставьте полный математический ID:
+      </p>
+
+      <textarea id="searchUnifiedInput" class="modal-textarea" placeholder="Вставьте ID (b32_..., b64_...) или номер (#1)..." spellcheck="false"></textarea>
+
+      <div id="searchErrorNotice" style="display: none; font-size: 0.75rem; color: #fb7185; margin-top: 0.5rem;"></div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+        <button id="searchCancelBtn" class="btn btn-secondary btn-sm" type="button">Отмена</button>
+        <button id="searchSubmitBtn" class="btn btn-primary btn-sm" type="button">Открыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo / Image Locator Modal (Ctrl+V, Drag & Drop, File Upload, 32x32 and 64x64) -->
+  <div id="photoModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>📷 Загрузить / Вставить изображение</span></h3>
+        <button id="photoCloseBtn" class="modal-close-btn" type="button">&times;</button>
+      </div>
+
+      <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Вставьте скриншот из буфера обмена (<strong>Ctrl+V</strong>), перетащите файл в окно или выберите на диске:
+      </p>
+
+      <input type="file" id="photoFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
+      
+      <!-- Dropzone -->
+      <div id="photoDropzone" class="photo-dropzone-box">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🐾 📥</div>
+        <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-main);">Перетащите картинку сюда или нажмите для выбора</div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">Поддерживаются PNG, JPG/JPEG, WebP и вставка Ctrl+V</div>
+      </div>
+
+      <!-- Preview Strip -->
+      <div id="photoPreviewWrap" style="display: none; align-items: center; gap: 0.85rem; margin-top: 1rem; background: var(--bg-input); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+        <img id="photoThumb" style="width: 56px; height: 56px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);" alt="Превью">
+        <div style="flex: 1; overflow: hidden;">
+          <div id="photoName" style="font-size: 0.8125rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+          <div id="photoMeta" style="font-size: 0.75rem; color: var(--accent-lavender); margin-top: 0.2rem;"></div>
+        </div>
+      </div>
+
+      <!-- Target Resolution Selector -->
+      <div id="photoResSelectRow" style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; background: var(--bg-card); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+        <span style="font-size: 0.8125rem; font-weight: 600;">Целевое разрешение матрицы:</span>
+        <div class="res-switcher" role="group">
+          <button id="photoTarget32" class="res-switch-btn active" type="button">32×32 (Стандарт)</button>
+          <button id="photoTarget64" class="res-switch-btn" type="button">64×64 (Детализированный)</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+        <button id="photoCancelBtn" class="btn btn-secondary btn-sm" type="button">Отмена</button>
+        <button id="photoCalculateBtn" class="btn btn-primary btn-sm" type="button" style="display: none;">Рассчитать адрес в архиве</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="cat_data.js"></script>
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

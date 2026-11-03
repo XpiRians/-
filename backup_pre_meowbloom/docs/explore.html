@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Каталог экспонатов — Галерея Муси и Кейти</title>
+  <meta name="description" content="Каталог зарегистрированных шедевров цифрового музея Муси и Кейти: поиск по номеру, миниатюры, удаление и экспорт.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Minimal Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <span class="logo-symbol">∞</span>
+        <div class="logo-text-wrap">
+          <span class="logo-title">ГАЛЕРЕЯ МУСИ И КЕЙТИ</span>
+          <span class="logo-badge">КАТАЛОГ ШЕДЕВРОВ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link active">КАТАЛОГ</a>
+          <a href="farm.html" class="nav-link">ФЕРМА 🐾🌾</a>
+          <a href="about.html" class="nav-link">О МУЗЕЕ</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container catalog-page-main">
+    <!-- Top Toolbar: Search, Filters, Import / Export -->
+    <div class="catalog-top-toolbar">
+      <div class="catalog-search-wrap">
+        <input type="text" id="catalogSearchInput" class="catalog-search-input" placeholder="Поиск по номеру (#000000001, 1), названию или ID..." spellcheck="false">
+      </div>
+
+      <div class="filter-pills-row">
+        <button class="filter-pill active" data-filter="all">Все</button>
+        <button class="filter-pill" data-filter="my">Мои экспонаты</button>
+        <button class="filter-pill" data-filter="guardians">Муся и Кейти</button>
+        <button class="filter-pill" data-filter="32">32×32</button>
+        <button class="filter-pill" data-filter="64">64×64</button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span id="catalogCountBadge" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim);">Экспонатов: ...</span>
+        <button id="btnExportCatalog" class="btn btn-secondary btn-sm" type="button" title="Экспорт каталога в файл JSON">📤 Экспорт</button>
+        <label class="btn btn-secondary btn-sm" style="cursor: pointer;" title="Импорт каталога из JSON">
+          📥 Импорт
+          <input type="file" id="importCatalogInput" accept=".json" style="display: none;">
+        </label>
+      </div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="catalogCardsGrid" class="catalog-cards-grid"></div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="permutation.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="generator.js"></script>
+  <script src="cat_data.js"></script>
+  <script src="catalog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
