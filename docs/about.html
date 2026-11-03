@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title data-i18n="nav_about">О МУЗЕЕ — ГАЛЕРЕЯ МУСИ И КЕТИ</title>
+  <meta name="description" content="Философия, математика и история бесконечной галереи Муси и Кети — цифрового музея всех возможных изображений.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <div class="logo-symbol">∞</div>
+        <div class="logo-text-wrap">
+          <span class="logo-title" data-i18n="site_name">ГАЛЕРЕЯ МУСИ И КЕТИ</span>
+          <span class="logo-badge" data-i18n="site_badge">БЕСКОНЕЧНЫЙ МУЗЕЙ</span>
+        </div>
+      </a>
+
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link" data-i18n="nav_gallery">ГАЛЕРЕЯ</a>
+          <a href="explore.html" class="nav-link" data-i18n="nav_archive">ЗАЛ ЭКСПОНАТОВ</a>
+          <a href="about.html" class="nav-link active" data-i18n="nav_about">О МУЗЕЕ</a>
+          <a href="tests.html" class="nav-link" data-i18n="nav_tests">ТЕСТЫ</a>
+        </nav>
+
+        <!-- Language Switcher Pill -->
+        <div class="lang-switch" role="group" aria-label="Выбор языка">
+          <button id="langBtnRu" class="lang-btn active" type="button">RU</button>
+          <span class="lang-divider">|</span>
+          <button id="langBtnEn" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="doc-box">
+      <!-- Museum Dedication Banner -->
+      <div style="display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-bottom: 2rem; padding: 1.25rem; background: rgba(147, 51, 234, 0.1); border: 1px solid var(--border-gold); border-radius: var(--radius-md);">
+        <div style="text-align: center;">
+          <img src="assets/musya.jpg" alt="Муся" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-gold); box-shadow: 0 0 15px rgba(251, 191, 36, 0.35);">
+          <div style="font-weight: 800; font-size: 0.875rem; margin-top: 0.35rem; color: #fff;">Муся 🐾</div>
+          <div style="font-size: 0.6875rem; color: var(--accent-lavender); font-family: var(--font-mono);">Хранительница Пространства</div>
+        </div>
+
+        <div style="text-align: center; max-width: 380px;">
+          <div style="font-size: 0.8125rem; font-family: var(--font-mono); color: var(--accent-gold); letter-spacing: 0.12em;">ПАТРОНЫ МУЗЕЯ</div>
+          <h2 style="margin: 0.25rem 0; font-size: 1.25rem; color: #fff;">Муся & Кети</h2>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Символы бесконечной гармонии, красоты и математического порядка во Вселенной цифровых матриц.</p>
+        </div>
+
+        <div style="text-align: center;">
+          <img src="assets/keti.jpg" alt="Кети" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; object-position: center 25%; border: 3px solid var(--accent-lavender); box-shadow: 0 0 15px rgba(192, 132, 252, 0.35);">
+          <div style="font-weight: 800; font-size: 0.875rem; margin-top: 0.35rem; color: #fff;">Кети 🐾</div>
+          <div style="font-size: 0.6875rem; color: var(--accent-lavender); font-family: var(--font-mono);">Хранительница Симметрии</div>
+        </div>
+      </div>
+
+      <h1>КОНЦЕПЦИЯ И МАТЕМАТИКА ГАЛЕРЕИ</h1>
+      <p>
+        <strong>Галерея Муси и Кети</strong> — это самостоятельный проект бесконечного цифрового архива, вдохновлённый философским рассказом Хорхе Луиса Борхеса <em>«Вавилонская библиотека»</em> (1941) и сетевым проектом <em>Gallery of Babel</em>.
+      </p>
+      <p>
+        Борхес описал бесконечную вселенную-библиотеку, содержащую все возможные книги, составленные из конечного набора букв. В нашем музее этот принцип перенесён в оптический спектр: перед вами интерактивное пространство, содержащее каждое цифровое изображение, которое физически возможно отобразить в фиксированных разрешениях.
+      </p>
+
+      <div class="alert-banner alert-info">
+        <strong>Фундаментальный принцип:</strong> Музей не хранит изображения в серверной базе данных. Каждое изображение закодировано в своём математическом адресе (ID). Декодирование адреса материализует изображение, а кодирование любой фотографии находит её точный адрес в пространстве Муси и Кети.
+      </div>
+
+      <h2>1. Два разрешения матрицы: 32×32 и 64×64</h2>
+      <p>
+        Галерея поддерживает два независимых математических сектора:
+      </p>
+      <ul>
+        <li>
+          <strong>32×32 Стандартный режим (1 024 пикселя):</strong>
+          1 024 пикселя × 4 канала (RGBA) × 8 бит = <strong>32 768 бит (4 096 байт)</strong>.<br>
+          Длина адреса Base64URL: <strong>5 462 символа</strong> (префикс <code>b32_</code>).<br>
+          Число состояний: <strong>2<sup>32 768</sup> ≈ 1.415 × 10<sup>9 864</sup></strong>.
+        </li>
+        <li>
+          <strong>64×64 Детализированный режим (4 096 пикселей):</strong>
+          4 096 пикселей × 4 канала (RGBA) × 8 бит = <strong>131 072 бит (16 384 байт)</strong>.<br>
+          Длина адреса Base64URL: <strong>21 846 символов</strong> (префикс <code>b64_</code>).<br>
+          Число состояний: <strong>2<sup>131 072</sup> ≈ 1.157 × 10<sup>39 457</sup></strong>.
+        </li>
+      </ul>
+
+      <div class="formula-card">
+        Пространство 32×32: 2<sup>32 768</sup> ≈ 10<sup>9 864</sup> экспонатов<br>
+        Пространство 64×64: 2<sup>131 072</sup> ≈ 10<sup>39 457</sup> экспонатов
+      </div>
+
+      <p>
+        Для сравнения: во всей видимой Вселенной насчитывается лишь около <strong>10<sup>80</sup> элементарных частиц</strong>. Даже меньшее пространство 32×32 превышает масштабы физической Вселенной на тысячи порядков! В формате 64×64 детализация уже достаточна для различимых портретов людей, кошек, пейзажей и шрифтов.
+      </p>
+
+      <h2>2. Биективная перестановка Фейстеля-SPN (Bijective PRP)</h2>
+      <p>
+        Обычное кодирование Base64 обладает недостатком: соседние строки дают почти одинаковые изображения (разница лишь в одном пикселе).
+      </p>
+      <p>
+        Чтобы превратить пространство в настоящую <em>Галерею Вавилона</em>, мы внедрили <strong>обратимую биективную перестановку Фейстеля-SPN</strong>:
+      </p>
+      <ul>
+        <li>4 раунда перемешивания блоков с нелинейной функцией подстановки (Murmur3-style 32-bit mix).</li>
+        <li>XOR-сложение с постоянными раундовыми ключами, полученными из дробной части числа $\pi$.</li>
+        <li><strong>Эффект лавины (~50%):</strong> при сдвиге адреса всего на $+1$ (следующий экспонат) меняется 99.6% байт, рождая совершенно иную, визуально непредсказуемую картину.</li>
+        <li><strong>100% обратимость:</strong> алгоритм не использует хеши с потерями (SHA-256 или MD5). Каждый шаг строго обратим: $\Pi_K^{-1}(\Pi_K(X)) = X$.</li>
+      </ul>
+
+      <h2>3. Хранительницы Пространства: Муся и Кети</h2>
+      <p>
+        Муся — серебристая плюшевая кошка с мудрым, внимательным взглядом. Она олицетворяет постоянство и бесконечность пространственных координат.
+      </p>
+      <p>
+        Кети — изящная зеленоглазая кошка с характерным хвостом-спиралью, похожим на математическую логарифмическую спираль. Она олицетворяет симметрию и биективность времени.
+      </p>
+      <p>
+        Их оригинальные фотографии оцифрованы и зафиксированы на вечных адресах архива. Нажав кнопку «Портрет Муси» или «Портрет Кети» в главном зале, вы мгновенно восстанавливаете их образы непосредственно из чисел Вавилонского пространства!
+      </p>
+
+      <div class="alert-banner alert-warning">
+        <strong>О природе математического архива:</strong> Любая фотография, которая когда-либо была или будет сделана человечеством, уже имеет своё строго определённое место в этом музее. Поиск по фото не создаёт новый файл — он лишь вычисляет координату, где этот образ ждал своего открытия с самого начала времён.
+      </div>
+    </article>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <aside class="mobile-bottom-bar" aria-label="Мобильная навигация">
+    <nav class="mobile-bottom-nav">
+      <a href="index.html" class="mob-nav-btn">
+        <span class="mob-icon">🐾</span>
+        <span data-i18n="nav_gallery">Галерея</span>
+      </a>
+      <a href="explore.html" class="mob-nav-btn">
+        <span class="mob-icon">🔭</span>
+        <span data-i18n="nav_archive">Зал</span>
+      </a>
+      <a href="about.html" class="mob-nav-btn active">
+        <span class="mob-icon">📖</span>
+        <span data-i18n="nav_about">О музее</span>
+      </a>
+      <a href="tests.html" class="mob-nav-btn">
+        <span class="mob-icon">🧪</span>
+        <span data-i18n="nav_tests">Тесты</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p data-i18n="footer_copy">ГАЛЕРЕЯ МУСИ И КЕТИ • БЕСКОНЕЧНЫЙ ЦИФРОВОЙ МУЗЕЙ</p>
+      <div class="footer-links">
+        <a href="index.html" data-i18n="nav_gallery">ГАЛЕРЕЯ</a>
+        <a href="explore.html" data-i18n="nav_archive">ЗАЛ ЭКСПОНАТОВ</a>
+        <a href="about.html" data-i18n="nav_about">О МУЗЕЕ</a>
+        <a href="tests.html" data-i18n="nav_tests">ТЕСТЫ</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="i18n.js"></script>
+</body>
+</html>
