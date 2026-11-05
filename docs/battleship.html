@@ -94,6 +94,13 @@
               <span>Матчи против реальных игроков</span>
             </div>
           </button>
+          <button id="tabCasual" class="mode-tab" type="button">
+            <span class="tab-icon">🛡️</span>
+            <div class="tab-meta">
+              <strong>Бои не на Эло</strong>
+              <span>Обычные бои и тренировка с ИИ</span>
+            </div>
+          </button>
           <button id="tabLeaderboard" class="mode-tab" type="button">
             <span class="tab-icon">🏆</span>
             <div class="tab-meta">
@@ -101,7 +108,6 @@
               <span>Таблица лучших адмиралов</span>
             </div>
           </button>
-          <button id="tabCasual" style="display: none;" type="button"></button>
         </div>
 
         <!-- Mode Indicator Banner -->
@@ -120,8 +126,18 @@
           </div>
         </div>
 
-        <!-- Menu Action Buttons Grid (Только реальные игроки) -->
-        <div class="menu-actions-grid online-only-grid">
+        <!-- Menu Action Buttons Grid -->
+        <div class="menu-actions-grid">
+          <!-- Только в режиме «Бои не на Эло» -->
+          <button id="btnPlayAi" class="menu-action-btn casual-only" type="button" style="display: none;">
+            <span class="btn-icon">🤖</span>
+            <div class="btn-text-wrap">
+              <strong>Игра против ИИ</strong>
+              <span>Одиночный тренировочный бой с Адмиралом Мяу</span>
+            </div>
+          </button>
+
+          <!-- 1. Быстрый матч -->
           <button id="btnQuickPlay" class="menu-action-btn primary" type="button">
             <span class="btn-icon" id="quickPlayIcon">⚡</span>
             <div class="btn-text-wrap">
@@ -130,6 +146,7 @@
             </div>
           </button>
 
+          <!-- 2. Создать комнату -->
           <button id="btnCreateRoom" class="menu-action-btn" type="button">
             <span class="btn-icon">🏰</span>
             <div class="btn-text-wrap">
@@ -138,6 +155,7 @@
             </div>
           </button>
 
+          <!-- 3. Войти в комнату -->
           <button id="btnJoinCode" class="menu-action-btn" type="button">
             <span class="btn-icon">🔑</span>
             <div class="btn-text-wrap">
@@ -146,6 +164,7 @@
             </div>
           </button>
 
+          <!-- 4. Найти свободные комнаты -->
           <button id="btnBrowseRooms" class="menu-action-btn" type="button">
             <span class="btn-icon">🔍</span>
             <div class="btn-text-wrap">
@@ -652,50 +671,17 @@
     </div>
   </div>
 
-  <!-- Modal Profile Setup (first-time nickname & avatar selection) -->
-  <div id="modalProfileSetup" class="modal-overlay">
-    <div class="modal-card profile-setup-card">
-      <div class="modal-header">
-        <h3>Регистрация личного дела капитана</h3>
-      </div>
-      <div class="profile-setup-content">
-        <p class="modal-desc">Добро пожаловать во флот! Укажите ваш уникальный боевой позывной для рейтинговой таблицы и онлайн-сражений:</p>
-        
-        <div class="avatar-setup-section">
-          <div class="avatar-preview-box">
-            <img id="setupAvatarImg" class="setup-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Admiral" alt="Avatar">
-          </div>
-          <div class="avatar-selector-chips">
-            <button type="button" class="avatar-chip active" data-seed="Admiral">👨‍✈️ Капитан</button>
-            <button type="button" class="avatar-chip" data-seed="NavyCat">🐱 Адмирал Мяу</button>
-            <button type="button" class="avatar-chip" data-seed="Corsair">🏴‍☠️ Корсар</button>
-            <button type="button" class="avatar-chip" data-seed="Submariner">🌊 Подводник</button>
-            <button type="button" class="avatar-chip" data-seed="Viking">⚔️ Викинг</button>
-          </div>
-        </div>
-
-        <div class="input-field-group">
-          <label for="inputSetupUsername">Боевой позывной (от 3 до 16 символов, буквы/цифры/подчёркивание):</label>
-          <input type="text" id="inputSetupUsername" class="modal-input" maxlength="16" placeholder="Например: Admiral_Storm">
-          <div id="setupUsernameError" class="input-error-msg" style="display: none;"></div>
-        </div>
-
-        <div class="modal-actions">
-          <button id="btnSaveProfileSetup" class="btn btn-primary btn-block" type="button">Утвердить позывной во флоте</button>
-          <p style="font-size: 11px; color: #64748b; text-align: center; margin-top: 10px; line-height: 1.4;">
-            Утверждая позывной, вы соглашаетесь с правилами честной игры <a href="terms.html" target="_blank" style="color: #38bdf8;">Пользовательского соглашения</a>.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Profile (Player stats & match history) -->
+  <!-- Modal Profile (Player stats, match history & settings) -->
   <div id="modalProfile" class="modal-overlay">
     <div class="modal-card profile-modal-card">
       <div class="modal-header">
-        <h3>Личное дело капитана</h3>
-        <button id="btnModalCloseProfile" class="modal-close" type="button">✕</button>
+        <div class="profile-header-title-wrap">
+          <h3>Личное дело капитана</h3>
+        </div>
+        <div class="profile-header-btns">
+          <button id="btnToggleProfileEdit" class="btn btn-secondary btn-sm" type="button" title="Изменить позывной и аватар">⚙️ Настройки профиля</button>
+          <button id="btnModalCloseProfile" class="modal-close" type="button">✕</button>
+        </div>
       </div>
       <div class="profile-card-body">
         <div class="profile-top-banner">
@@ -710,6 +696,41 @@
               <strong id="profElo" class="profile-elo-val">1000 ELO</strong>
             </div>
           </div>
+        </div>
+
+        <!-- Настройка профиля (позывной и аватар прямо в профиле) -->
+        <div id="profileEditSection" class="profile-edit-box" style="display: none;">
+          <div class="profile-edit-header">
+            <h4>⚙️ Настройка личного дела капитана</h4>
+            <p class="profile-edit-desc">Выберите боевой позывной и аватар для отображения в списках флота и рейтинге:</p>
+          </div>
+
+          <div class="avatar-setup-section">
+            <div class="avatar-preview-box">
+              <img id="setupAvatarImg" class="setup-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Admiral" alt="Avatar">
+            </div>
+            <div class="avatar-selector-chips">
+              <button type="button" class="avatar-chip active" data-seed="Admiral">👨‍✈️ Капитан</button>
+              <button type="button" class="avatar-chip" data-seed="NavyCat">🐱 Адмирал Мяу</button>
+              <button type="button" class="avatar-chip" data-seed="Corsair">🏴‍☠️ Корсар</button>
+              <button type="button" class="avatar-chip" data-seed="Submariner">🌊 Подводник</button>
+              <button type="button" class="avatar-chip" data-seed="Viking">⚔️ Викинг</button>
+            </div>
+          </div>
+
+          <div class="input-field-group">
+            <label for="inputSetupUsername">Боевой позывной (от 3 до 16 символов, буквы/цифры/подчёркивание):</label>
+            <input type="text" id="inputSetupUsername" class="modal-input" maxlength="16" placeholder="Например: Admiral_Storm">
+            <div id="setupUsernameError" class="input-error-msg" style="display: none;"></div>
+          </div>
+
+          <div class="profile-edit-actions">
+            <button id="btnSaveProfileSetup" class="btn btn-primary" type="button">💾 Сохранить позывной во флоте</button>
+            <button id="btnCancelProfileEdit" class="btn btn-secondary" type="button">Скрыть настройки</button>
+          </div>
+          <p style="font-size: 11px; color: #64748b; text-align: center; margin-top: 10px; line-height: 1.4;">
+            Утверждая позывной, вы соглашаетесь с правилами честной игры <a href="terms.html" target="_blank" style="color: #38bdf8;">Пользовательского соглашения</a>.
+          </p>
         </div>
 
         <!-- Ranked Stats Grid -->

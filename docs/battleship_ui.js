@@ -257,7 +257,9 @@
       });
     });
 
-    // Profile Setup Modal
+    // Profile Setup & Edit inside Dossier
+    bindClick('btnToggleProfileEdit', toggleProfileEditSection);
+    bindClick('btnCancelProfileEdit', hideProfileEditSection);
     bindClick('btnSaveProfileSetup', handleSaveProfileSetup);
     document.querySelectorAll('.avatar-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -720,11 +722,6 @@
 
       const avatarSrc = info.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`;
       if (avatarImg) avatarImg.src = avatarSrc;
-
-      // If player has not yet chosen their callsign, open setup modal
-      if (!info.profile || !info.profile.username) {
-        openProfileSetupModal();
-      }
     } else {
       if (btnLogin) btnLogin.style.display = 'inline-flex';
       userProf.style.display = 'none';
@@ -738,7 +735,7 @@
   }
 
   function setLobbyMode(mode = 'ranked') {
-    currentLobbyMode = 'ranked';
+    currentLobbyMode = (mode === 'casual') ? 'casual' : 'ranked';
 
     const tabCas = document.getElementById('tabCasual');
     const tabRnk = document.getElementById('tabRanked');
@@ -748,30 +745,59 @@
     const quickTitle = document.getElementById('quickPlayTitle');
     const quickDesc = document.getElementById('quickPlayDesc');
     const quickIcon = document.getElementById('quickPlayIcon');
+    const createTitle = document.getElementById('createRoomTitle');
+    const createDesc = document.getElementById('createRoomDesc');
+    const btnPlayAi = document.getElementById('btnPlayAi');
 
-    if (tabCas) tabCas.style.display = 'none';
-    if (tabRnk) tabRnk.classList.add('active');
-    if (banner) banner.className = 'active-mode-banner ranked';
-    if (bannerIcon) bannerIcon.textContent = '⚔️';
-    if (bannerText) bannerText.innerHTML = 'Режим: <strong>Бои на Эло</strong> — сетевые дуэли против реальных игроков за очки рейтинга ELO (K=32).';
-    if (quickTitle) quickTitle.textContent = 'Быстрый матч';
-    if (quickDesc) quickDesc.textContent = 'Мгновенный подбор реального игрока на Эло';
-    if (quickIcon) quickIcon.textContent = '⚡';
+    if (currentLobbyMode === 'ranked') {
+      if (tabCas) tabCas.classList.remove('active');
+      if (tabRnk) tabRnk.classList.add('active');
+      if (btnPlayAi) btnPlayAi.style.display = 'none';
+      if (banner) banner.className = 'active-mode-banner ranked';
+      if (bannerIcon) bannerIcon.textContent = '⚔️';
+      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Бои на Эло</strong> — сетевые дуэли против реальных игроков за очки рейтинга ELO (K=32).';
+      if (quickTitle) quickTitle.textContent = 'Быстрый матч';
+      if (quickDesc) quickDesc.textContent = 'Мгновенный подбор реального игрока на Эло';
+      if (quickIcon) quickIcon.textContent = '⚡';
+      if (createTitle) createTitle.textContent = 'Создать комнату';
+      if (createDesc) createDesc.textContent = 'Код для приглашения соперника на дуэль';
+    } else {
+      if (tabCas) tabCas.classList.add('active');
+      if (tabRnk) tabRnk.classList.remove('active');
+      if (btnPlayAi) btnPlayAi.style.display = 'flex';
+      if (banner) banner.className = 'active-mode-banner casual';
+      if (bannerIcon) bannerIcon.textContent = '🛡️';
+      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Бои не на Эло</strong> — свободные сражения и тренировка с ИИ без риска для рейтинга.';
+      if (quickTitle) quickTitle.textContent = 'Быстрый матч (обычный)';
+      if (quickDesc) quickDesc.textContent = 'Мгновенный подбор соперника без рейтинга';
+      if (quickIcon) quickIcon.textContent = '⚡';
+      if (createTitle) createTitle.textContent = 'Создать комнату';
+      if (createDesc) createDesc.textContent = 'Комната для товарищеского боя без рейтинга';
+    }
+  }
+
+  function toggleProfileEditSection() {
+    const editSec = document.getElementById('profileEditSection');
+    if (!editSec) return;
+    const isHidden = (editSec.style.display === 'none' || !editSec.style.display);
+    editSec.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      const pInfo = Online.getPlayerInfo();
+      const input = document.getElementById('inputSetupUsername');
+      if (input) {
+        input.value = pInfo.profile?.username || '';
+        setTimeout(() => input.focus(), 100);
+      }
+    }
+  }
+
+  function hideProfileEditSection() {
+    const editSec = document.getElementById('profileEditSection');
+    if (editSec) editSec.style.display = 'none';
   }
 
   function openProfileSetupModal() {
-    const input = document.getElementById('inputSetupUsername');
-    const pInfo = Online.getPlayerInfo();
-    const suggested = pInfo.profile?.username ||
-                      pInfo.user?.user_metadata?.username ||
-                      pInfo.user?.user_metadata?.full_name?.replace(/[^a-zA-Z0-9_]/g, '') || '';
-    if (input) input.value = suggested.slice(0, 16);
-
-    const errEl = document.getElementById('setupUsernameError');
-    if (errEl) errEl.style.display = 'none';
-
-    updateAvatarPreview(selectedAvatarSeed);
-    openModal('modalProfileSetup');
+    openProfileModal(null, true);
   }
 
   function updateAvatarPreview(seed) {
@@ -808,9 +834,10 @@
 
     try {
       await Online.setProfileUsername(val, avatarUrl);
-      closeModal('modalProfileSetup');
-      showToast(`🎖️ Позывной "${val}" успешно утверждён во флоте!`);
+      hideProfileEditSection();
+      showToast(`🎖️ Позывной "${val}" успешно сохранён во флоте!`);
       await Online.initAuth();
+      openProfileModal(null, false);
     } catch (err) {
       if (errEl) {
         errEl.textContent = err.message || 'Ошибка сохранения позывного';
@@ -819,13 +846,14 @@
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Утвердить позывной во флоте';
+        saveBtn.textContent = '💾 Сохранить позывной во флоте';
       }
     }
   }
 
-  async function openProfileModal(targetUserId = null) {
+  async function openProfileModal(targetUserId = null, showEditDirectly = false) {
     const pInfo = Online.getPlayerInfo();
+    const isMe = !targetUserId || (pInfo.user && pInfo.user.id === targetUserId);
     const uid = targetUserId || pInfo.user?.id;
     if (!uid) {
       openModal('modalAuth');
@@ -833,6 +861,24 @@
     }
 
     openModal('modalProfile');
+
+    const editSec = document.getElementById('profileEditSection');
+    const toggleBtn = document.getElementById('btnToggleProfileEdit');
+
+    if (toggleBtn) {
+      toggleBtn.style.display = isMe ? 'inline-flex' : 'none';
+    }
+
+    if (isMe && (showEditDirectly || !pInfo.profile?.username)) {
+      if (editSec) editSec.style.display = 'block';
+      const input = document.getElementById('inputSetupUsername');
+      if (input) {
+        input.value = pInfo.profile?.username || '';
+        setTimeout(() => input.focus(), 150);
+      }
+    } else {
+      if (editSec) editSec.style.display = 'none';
+    }
 
     const usernameEl = document.getElementById('profUsername');
     const avatarEl = document.getElementById('profAvatar');
@@ -996,18 +1042,21 @@
 
   async function startQuickMatch() {
     gameMode = 'online';
-    const pInfo = Online.getPlayerInfo();
-    if (!pInfo.isAuth) {
-      openAuthModal('login');
-      showToast('Для участия в сетевых боях на Эло необходимо войти в аккаунт капитана', 'error');
-      return;
+    const isRanked = (currentLobbyMode === 'ranked');
+    if (isRanked) {
+      const pInfo = Online.getPlayerInfo();
+      if (!pInfo.isAuth) {
+        openAuthModal('login');
+        showToast('Для участия в сетевых боях на Эло необходимо войти в аккаунт капитана', 'error');
+        return;
+      }
+      if (!pInfo.profile || !pInfo.profile.username) {
+        openProfileModal(null, true);
+        showToast('Пожалуйста, укажите ваш позывной в профиле для боёв на Эло', 'warning');
+        return;
+      }
     }
-    if (!pInfo.profile || !pInfo.profile.username) {
-      openProfileSetupModal();
-      return;
-    }
-    const isRanked = true; // Всегда бой на Эло против реального игрока
-    showToast('Поиск соперника на Эло...');
+    showToast(isRanked ? 'Поиск соперника на Эло...' : 'Поиск открытой комнаты...');
     try {
       const room = await Online.quickMatch(isRanked);
       handleJoinedRoom(room);
@@ -1018,17 +1067,20 @@
 
   async function handleCreateRoom() {
     gameMode = 'online';
-    const pInfo = Online.getPlayerInfo();
-    if (!pInfo.isAuth) {
-      openAuthModal('login');
-      showToast('Для создания комнаты на Эло необходимо войти в аккаунт капитана', 'error');
-      return;
+    const isRanked = (currentLobbyMode === 'ranked');
+    if (isRanked) {
+      const pInfo = Online.getPlayerInfo();
+      if (!pInfo.isAuth) {
+        openAuthModal('login');
+        showToast('Для создания комнаты на Эло необходимо войти в аккаунт капитана', 'error');
+        return;
+      }
+      if (!pInfo.profile || !pInfo.profile.username) {
+        openProfileModal(null, true);
+        showToast('Пожалуйста, укажите ваш позывной в профиле для боёв на Эло', 'warning');
+        return;
+      }
     }
-    if (!pInfo.profile || !pInfo.profile.username) {
-      openProfileSetupModal();
-      return;
-    }
-    const isRanked = true; // Всегда бой на Эло против реального игрока
     try {
       const room = await Online.createRoom(isRanked);
       handleJoinedRoom(room);
@@ -1038,15 +1090,14 @@
   }
 
   async function handleBrowseRooms() {
-    const pInfo = Online.getPlayerInfo();
-    if (!pInfo.isAuth) {
-      openAuthModal('login');
-      showToast('Для поиска онлайн-комнат необходимо войти в аккаунт капитана', 'error');
-      return;
-    }
-    if (!pInfo.profile || !pInfo.profile.username) {
-      openProfileSetupModal();
-      return;
+    const isRanked = (currentLobbyMode === 'ranked');
+    if (isRanked) {
+      const pInfo = Online.getPlayerInfo();
+      if (!pInfo.isAuth) {
+        openAuthModal('login');
+        showToast('Для поиска комнат на Эло необходимо войти в аккаунт капитана', 'error');
+        return;
+      }
     }
 
     openModal('modalRoomsList');
