@@ -4,13 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>INFINITE GALLERY: BATTLESHIP — Морской бой</title>
-  <meta name="description" content="Морской бой онлайн в Бесконечной Галерее: дуэли 1v1, лобби, умный ИИ, анимации выстрелов и взрывов.">
+  <meta name="description" content="Морской бой онлайн в Бесконечной Галерее: дуэли 1v1, лобби, умный ИИ, система ELO и рейтинги, безопасная авторизация по email.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="battleship.css">
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="battleship-body">
 
@@ -24,6 +26,7 @@
           <span class="logo-badge">PvP & AI</span>
         </div>
       </a>
+
       <div class="header-nav-group">
         <nav class="site-nav">
           <a href="index.html" class="nav-link">Галерея</a>
@@ -32,6 +35,33 @@
           <a href="battleship.html" class="nav-link active">Морской бой ⚓</a>
           <a href="about.html" class="nav-link">О проекте</a>
         </nav>
+
+        <!-- Header Auth Widget -->
+        <div id="headerAuthContainer" class="header-auth-container">
+          <button id="btnHeaderLogin" class="btn-header-login" type="button" title="Войти в штаб флота для рейтинговых боёв">
+            <span class="auth-icon">⚓</span>
+            <span class="auth-text">Войти в штаб</span>
+          </button>
+
+          <div id="headerUserProfile" class="header-user-profile" style="display: none;">
+            <div class="user-avatar-wrap" id="headerAvatarWrap" title="Открыть личное дело">
+              <img id="headerUserAvatar" class="header-user-avatar" src="" alt="Аватар">
+              <span id="headerUserRankBadge" class="header-rank-badge">⚓</span>
+            </div>
+            <div class="user-info-wrap" id="headerUserInfoBtn" role="button" tabindex="0" title="Открыть личное дело">
+              <div class="user-name-line">
+                <strong id="headerUserName" class="header-user-name">Капитан</strong>
+              </div>
+              <div class="user-rank-line">
+                <span id="headerRankTier" class="header-rank-tier">Новобранец</span>
+                <span id="headerUserElo" class="header-user-elo">1000 ELO</span>
+              </div>
+            </div>
+            <button id="btnHeaderProfile" class="btn-header-icon" type="button" title="Профиль капитана">🎖️</button>
+            <button id="btnHeaderLogout" class="btn-header-icon" type="button" title="Выйти из аккаунта">🚪</button>
+          </div>
+        </div>
+
         <button id="btnToggleSound" class="sound-toggle-btn" type="button" title="Включить / выключить звук">🔊</button>
       </div>
     </div>
@@ -50,14 +80,46 @@
         <div class="menu-radar-decor"></div>
         <div class="menu-badge">ТАКТИЧЕСКИЙ МОРСКОЙ РЕЖИМ</div>
         <h1 class="menu-title">INFINITE GALLERY: BATTLESHIP</h1>
-        <p class="menu-subtitle">Классический морской бой с живыми дуэлями, умным ИИ, анимацией снарядов и синхронизацией ходов</p>
+        <p class="menu-subtitle">Классический морской бой с живыми дуэлями, умным ИИ, серверным ELO-рейтингом и таблицей лидеров</p>
+
+        <!-- Battle Mode Selector Tabs -->
+        <div class="mode-tabs-container">
+          <button id="tabCasual" class="mode-tab active" type="button">
+            <span class="tab-icon">🛡️</span>
+            <div class="tab-meta">
+              <strong>Обычный бой</strong>
+              <span>Без риска для рейтинга ELO</span>
+            </div>
+          </button>
+          <button id="tabRanked" class="mode-tab" type="button">
+            <span class="tab-icon">⚔️</span>
+            <div class="tab-meta">
+              <strong>Рейтинговый бой</strong>
+              <span>Очки ELO • Аккаунт капитана</span>
+            </div>
+          </button>
+          <button id="tabLeaderboard" class="mode-tab" type="button">
+            <span class="tab-icon">🏆</span>
+            <div class="tab-meta">
+              <strong>Зал славы</strong>
+              <span>Таблица лучших адмиралов</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Mode Indicator Banner -->
+        <div id="activeModeBanner" class="active-mode-banner casual">
+          <span class="banner-icon" id="bannerModeIcon">🛡️</span>
+          <span id="activeModeText" class="banner-text">Режим: <strong>Обычный бой</strong> — свободная игра без риска для рейтинга.</span>
+        </div>
 
         <!-- Player Nickname Box -->
         <div class="player-nickname-box">
           <span class="nickname-label">Позывной капитана:</span>
           <div class="nickname-input-wrap">
-            <span class="nickname-icon">🎖️</span>
+            <span class="nickname-icon" id="nicknameIcon">🎖️</span>
             <input type="text" id="playerNameInput" maxlength="20" value="Адмирал" placeholder="Введите позывной...">
+            <button id="btnEditProfileQuick" class="btn-edit-profile-quick" type="button" style="display: none;" title="Редактировать позывной">✏️</button>
           </div>
         </div>
 
@@ -72,18 +134,18 @@
           </button>
 
           <button id="btnQuickPlay" class="menu-action-btn" type="button">
-            <span class="btn-icon">⚡</span>
+            <span class="btn-icon" id="quickPlayIcon">⚡</span>
             <div class="btn-text-wrap">
-              <strong>Быстрая игра онлайн</strong>
-              <span>Мгновенный подбор случайного соперника</span>
+              <strong id="quickPlayTitle">Быстрая игра онлайн</strong>
+              <span id="quickPlayDesc">Мгновенный подбор случайного соперника</span>
             </div>
           </button>
 
           <button id="btnCreateRoom" class="menu-action-btn" type="button">
             <span class="btn-icon">🏰</span>
             <div class="btn-text-wrap">
-              <strong>Создать комнату</strong>
-              <span>Сгенерировать код для приглашения друга</span>
+              <strong id="createRoomTitle">Создать комнату</strong>
+              <span id="createRoomDesc">Сгенерировать код для приглашения друга</span>
             </div>
           </button>
 
@@ -112,7 +174,10 @@
     <section id="screen-lobby" class="screen-container" style="display: none;">
       <div class="lobby-card">
         <div class="lobby-header">
-          <h2>Комната ожидания боя</h2>
+          <div class="lobby-title-wrap">
+            <h2>Комната ожидания боя</h2>
+            <span id="lobbyModeBadge" class="lobby-mode-badge casual">🛡️ ОБЫЧНЫЙ МАТЧ</span>
+          </div>
           <div class="room-code-banner">
             <span>КОД КОМНАТЫ:</span>
             <strong id="lobbyRoomCodeText">SEA000</strong>
@@ -122,16 +187,18 @@
 
         <div class="lobby-players-row">
           <div class="lobby-player-box left">
-            <div class="lobby-avatar">👨‍✈️</div>
+            <div class="lobby-avatar" id="lobbyP1Avatar">👨‍✈️</div>
             <strong id="lobbyP1Name" class="lobby-pname">Адмирал</strong>
+            <span id="lobbyP1Rank" class="lobby-prank" style="display: none;">Новобранец (1000 ELO)</span>
             <span class="lobby-pstatus ready">Готов к расстановке</span>
           </div>
 
           <div class="lobby-vs-badge">VS</div>
 
           <div class="lobby-player-box right">
-            <div class="lobby-avatar waiting">⏳</div>
+            <div class="lobby-avatar waiting" id="lobbyP2Avatar">⏳</div>
             <strong id="lobbyP2Name" class="lobby-pname">Ожидание соперника...</strong>
+            <span id="lobbyP2Rank" class="lobby-prank" style="display: none;"></span>
             <span class="lobby-pstatus">Подключение...</span>
           </div>
         </div>
@@ -325,6 +392,19 @@
         <p id="modalGameOverSubtitle" class="gameover-sub">Все вражеские корабли уничтожены!</p>
       </div>
 
+      <!-- ELO Rating Delta Banner (Ranked matches) -->
+      <div id="gameoverEloBanner" class="gameover-elo-banner" style="display: none;">
+        <div class="elo-banner-header">РЕЙТИНГ КАПИТАНА (ELO)</div>
+        <div class="elo-banner-row">
+          <span id="eloBeforeVal" class="elo-val before">1000</span>
+          <span class="elo-arrow">➔</span>
+          <span id="eloDeltaVal" class="elo-delta-pill plus">+24</span>
+          <span class="elo-arrow">➔</span>
+          <strong id="eloAfterVal" class="elo-val after">1024</strong>
+        </div>
+        <div class="elo-tier-update" id="eloTierUpdateText">Звание: Новобранец</div>
+      </div>
+
       <!-- Stats Grid -->
       <div class="gameover-stats-grid">
         <div class="stat-card">
@@ -375,12 +455,326 @@
   <div id="modalRoomsList" class="modal-overlay">
     <div class="modal-card rooms-list-modal">
       <div class="modal-header">
-        <h3>Открытые комнаты</h3>
+        <div class="rooms-header-title-wrap">
+          <h3>Открытые комнаты</h3>
+          <span id="roomsFilterBadge" class="rooms-filter-badge">Все режимы</span>
+        </div>
         <button id="btnModalCloseRooms" class="modal-close" type="button">✕</button>
       </div>
       <div id="roomsListContainer" class="rooms-container"></div>
       <div class="modal-actions">
         <button id="btnRefreshRooms" class="btn btn-secondary btn-block" type="button">🔄 Обновить список</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Auth (Email / Password / 6-digit OTP) -->
+  <div id="modalAuth" class="modal-overlay">
+    <div class="modal-card auth-modal">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Штаб флота: Авторизация</h3>
+        <button id="btnModalCloseAuth" class="modal-close" type="button">✕</button>
+      </div>
+      <div class="auth-modal-content">
+
+        <!-- VIEW 1: LOGIN -->
+        <div id="authViewLogin" class="auth-view active">
+          <div class="auth-naval-emblem">⚓</div>
+          <h4>Вход в аккаунт капитана</h4>
+          <p class="modal-desc">
+            Введите электронную почту и пароль для входа в онлайн-штаб.
+          </p>
+
+          <form id="formLogin" class="auth-form" onsubmit="return false;">
+            <div class="auth-field">
+              <label for="loginEmail">Электронная почта</label>
+              <input id="loginEmail" type="email" autocomplete="email" placeholder="captain@fleet.net" class="auth-input" required>
+            </div>
+            <div class="auth-field">
+              <label for="loginPassword">Пароль</label>
+              <div class="auth-password-wrap">
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Введите пароль" class="auth-input" required>
+                <button type="button" class="btn-toggle-pwd" data-target="loginPassword" title="Показать/скрыть пароль">👁️</button>
+              </div>
+            </div>
+
+            <div id="loginError" class="auth-error-box" style="display: none;"></div>
+
+            <button id="btnLoginSubmit" class="btn btn-primary btn-block auth-submit-btn" type="button">
+              <span class="btn-text">Войти в штаб</span>
+              <span class="btn-spinner" style="display: none;">⏳ Проверка...</span>
+            </button>
+
+            <div class="auth-links-row">
+              <button id="btnGoToForgotPassword" class="auth-link-btn" type="button">Забыли пароль?</button>
+            </div>
+
+            <div class="auth-switch-text">
+              Ещё нет аккаунта? <button id="btnGoToRegister" class="auth-link-bold" type="button">Зарегистрироваться</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- VIEW 2: REGISTER -->
+        <div id="authViewRegister" class="auth-view" style="display: none;">
+          <div class="auth-naval-emblem">🎖️</div>
+          <h4>Регистрация капитана</h4>
+          <p class="modal-desc">
+            Создайте позывной для рейтингов и укажите email для отправки 6-значного кода подтверждения.
+          </p>
+
+          <form id="formRegister" class="auth-form" onsubmit="return false;">
+            <div class="auth-field">
+              <label for="regUsername">Боевой позывной (логин)</label>
+              <input id="regUsername" type="text" autocomplete="username" minlength="3" maxlength="16" placeholder="Например: Адмирал_Корсар" class="auth-input" required>
+              <span class="auth-field-hint">От 3 до 16 символов (буквы, цифры, _)</span>
+            </div>
+
+            <div class="auth-field">
+              <label for="regEmail">Электронная почта</label>
+              <input id="regEmail" type="email" autocomplete="email" placeholder="captain@fleet.net" class="auth-input" required>
+            </div>
+
+            <div class="auth-field">
+              <label for="regPassword">Пароль</label>
+              <div class="auth-password-wrap">
+                <input id="regPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Минимум 6 символов" class="auth-input" required>
+                <button type="button" class="btn-toggle-pwd" data-target="regPassword" title="Показать/скрыть пароль">👁️</button>
+              </div>
+            </div>
+
+            <div class="auth-field">
+              <label for="regPasswordConfirm">Повтор пароля</label>
+              <div class="auth-password-wrap">
+                <input id="regPasswordConfirm" type="password" autocomplete="new-password" placeholder="Повторите пароль" class="auth-input" required>
+                <button type="button" class="btn-toggle-pwd" data-target="regPasswordConfirm" title="Показать/скрыть пароль">👁️</button>
+              </div>
+            </div>
+
+            <div id="regError" class="auth-error-box" style="display: none;"></div>
+
+            <button id="btnRegSubmit" class="btn btn-primary btn-block auth-submit-btn" type="button">
+              <span class="btn-text">Получить шестизначный код</span>
+              <span class="btn-spinner" style="display: none;">⏳ Отправка кода...</span>
+            </button>
+
+            <div class="auth-switch-text">
+              Уже зарегистрированы? <button id="btnGoToLogin" class="auth-link-bold" type="button">Войти в штаб</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- VIEW 3: CONFIRM EMAIL (6-DIGIT OTP CODE) -->
+        <div id="authViewConfirmOtp" class="auth-view" style="display: none;">
+          <div class="auth-naval-emblem">📩</div>
+          <h4>Подтверждение почты</h4>
+          <p class="modal-desc">
+            Шестизначный код подтверждения отправлен на почту:<br>
+            <strong id="otpTargetEmail" class="otp-highlight-email"></strong>
+          </p>
+
+          <form id="formConfirmOtp" class="auth-form" onsubmit="return false;">
+            <div class="auth-field">
+              <label for="otpCodeInput">Шестизначный код из письма</label>
+              <div class="otp-input-wrapper">
+                <input id="otpCodeInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="• • • • • •" class="otp-code-input" autocomplete="one-time-code" required>
+              </div>
+            </div>
+
+            <div id="otpStatusMsg" class="auth-error-box" style="display: none;"></div>
+
+            <button id="btnVerifyOtpSubmit" class="btn btn-primary btn-block auth-submit-btn" type="button">
+              <span class="btn-text">Подтвердить и войти</span>
+              <span class="btn-spinner" style="display: none;">⏳ Активация...</span>
+            </button>
+
+            <button id="btnResendOtp" class="btn btn-secondary btn-block" type="button">
+              Отправить код повторно
+            </button>
+
+            <div class="auth-switch-text">
+              <button id="btnBackFromOtp" class="auth-link-btn" type="button">← Изменить email или данные</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- VIEW 4: FORGOT / RESET PASSWORD -->
+        <div id="authViewForgotPassword" class="auth-view" style="display: none;">
+          <div class="auth-naval-emblem">🔑</div>
+          <h4>Восстановление пароля</h4>
+          <p class="modal-desc" id="forgotDesc">
+            Введите ваш email, и мы отправим шестизначный код для сброса пароля.
+          </p>
+
+          <form id="formForgotPassword" class="auth-form" onsubmit="return false;">
+            <!-- Step 1: Request Code -->
+            <div id="forgotStep1">
+              <div class="auth-field">
+                <label for="forgotEmail">Электронная почта</label>
+                <input id="forgotEmail" type="email" placeholder="captain@fleet.net" class="auth-input" required>
+              </div>
+              <button id="btnSendResetCode" class="btn btn-primary btn-block auth-submit-btn" type="button">
+                <span class="btn-text">Отправить код сброса</span>
+                <span class="btn-spinner" style="display: none;">⏳ Отправка...</span>
+              </button>
+            </div>
+
+            <!-- Step 2: Code & New Password (shown after code sent) -->
+            <div id="forgotStep2" style="display: none;">
+              <div class="auth-field">
+                <label for="resetOtpCode">Шестизначный код сброса</label>
+                <input id="resetOtpCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-значный код" class="auth-input" required>
+              </div>
+              <div class="auth-field">
+                <label for="resetNewPassword">Новый пароль</label>
+                <div class="auth-password-wrap">
+                  <input id="resetNewPassword" type="password" minlength="6" placeholder="Минимум 6 символов" class="auth-input" required>
+                  <button type="button" class="btn-toggle-pwd" data-target="resetNewPassword">👁️</button>
+                </div>
+              </div>
+              <button id="btnSubmitNewPassword" class="btn btn-primary btn-block auth-submit-btn" type="button">
+                <span class="btn-text">Сохранить новый пароль</span>
+                <span class="btn-spinner" style="display: none;">⏳ Сохранение...</span>
+              </button>
+            </div>
+
+            <div id="forgotError" class="auth-error-box" style="display: none;"></div>
+
+            <div class="auth-switch-text">
+              <button id="btnBackToLoginFromForgot" class="auth-link-btn" type="button">← Вернуться ко входу</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Profile Setup (first-time nickname & avatar selection) -->
+  <div id="modalProfileSetup" class="modal-overlay">
+    <div class="modal-card profile-setup-card">
+      <div class="modal-header">
+        <h3>Регистрация личного дела капитана</h3>
+      </div>
+      <div class="profile-setup-content">
+        <p class="modal-desc">Добро пожаловать во флот! Укажите ваш уникальный боевой позывной для рейтинговой таблицы и онлайн-сражений:</p>
+        
+        <div class="avatar-setup-section">
+          <div class="avatar-preview-box">
+            <img id="setupAvatarImg" class="setup-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Admiral" alt="Avatar">
+          </div>
+          <div class="avatar-selector-chips">
+            <button type="button" class="avatar-chip active" data-seed="Admiral">👨‍✈️ Капитан</button>
+            <button type="button" class="avatar-chip" data-seed="NavyCat">🐱 Адмирал Мяу</button>
+            <button type="button" class="avatar-chip" data-seed="Corsair">🏴‍☠️ Корсар</button>
+            <button type="button" class="avatar-chip" data-seed="Submariner">🌊 Подводник</button>
+            <button type="button" class="avatar-chip" data-seed="Viking">⚔️ Викинг</button>
+          </div>
+        </div>
+
+        <div class="input-field-group">
+          <label for="inputSetupUsername">Боевой позывной (от 3 до 16 символов, буквы/цифры/подчёркивание):</label>
+          <input type="text" id="inputSetupUsername" class="modal-input" maxlength="16" placeholder="Например: Admiral_Storm">
+          <div id="setupUsernameError" class="input-error-msg" style="display: none;"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnSaveProfileSetup" class="btn btn-primary btn-block" type="button">Утвердить позывной во флоте</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Profile (Player stats & match history) -->
+  <div id="modalProfile" class="modal-overlay">
+    <div class="modal-card profile-modal-card">
+      <div class="modal-header">
+        <h3>Личное дело капитана</h3>
+        <button id="btnModalCloseProfile" class="modal-close" type="button">✕</button>
+      </div>
+      <div class="profile-card-body">
+        <div class="profile-top-banner">
+          <div class="profile-avatar-large-wrap">
+            <img id="profAvatar" class="profile-avatar-large" src="" alt="Аватар">
+            <span id="profRankBadgeLarge" class="profile-rank-badge-large">⚓</span>
+          </div>
+          <div class="profile-info-large">
+            <h2 id="profUsername" class="profile-username">Адмирал</h2>
+            <div class="profile-tier-row">
+              <span id="profRankTier" class="profile-tier-tag">Новобранец</span>
+              <strong id="profElo" class="profile-elo-val">1000 ELO</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ranked Stats Grid -->
+        <div class="profile-stats-grid">
+          <div class="prof-stat-box">
+            <div class="stat-big-val" id="profRankedWins">0</div>
+            <div class="stat-small-lbl">Побед (Рейтинг)</div>
+          </div>
+          <div class="prof-stat-box">
+            <div class="stat-big-val" id="profRankedLosses">0</div>
+            <div class="stat-small-lbl">Поражений</div>
+          </div>
+          <div class="prof-stat-box">
+            <div class="stat-big-val" id="profRankedWinrate">0%</div>
+            <div class="stat-small-lbl">Винрейт</div>
+          </div>
+          <div class="prof-stat-box">
+            <div class="stat-big-val" id="profRankedGames">0</div>
+            <div class="stat-small-lbl">Боёв всего</div>
+          </div>
+        </div>
+
+        <!-- Casual summary line -->
+        <div class="profile-casual-summary">
+          <span>Обычные бои:</span>
+          <strong id="profCasualStatsText">0 побед / 0 поражений</strong>
+        </div>
+
+        <!-- Match History -->
+        <div class="profile-history-section">
+          <h4 class="history-title">История последних рейтинговых матчей</h4>
+          <div id="profileHistoryContainer" class="history-container">
+            <div class="history-empty">Матчей пока не сыграно</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Leaderboard (Global Rankings) -->
+  <div id="modalLeaderboard" class="modal-overlay">
+    <div class="modal-card leaderboard-modal-card">
+      <div class="modal-header">
+        <div class="leaderboard-title-group">
+          <h3>🏆 Зал морской славы</h3>
+          <span class="leaderboard-sub">Таблица лучших адмиралов флота</span>
+        </div>
+        <button id="btnModalCloseLeaderboard" class="modal-close" type="button">✕</button>
+      </div>
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Капитан</th>
+              <th class="col-tier">Звание</th>
+              <th class="col-elo">Рейтинг ELO</th>
+              <th class="col-winrate">Винрейт</th>
+              <th class="col-record">В / П</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardTableBody">
+            <tr><td colspan="6" class="loading-td">Загрузка данных флота...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="leaderboard-pagination">
+        <button id="btnLeaderboardPrev" class="btn btn-secondary btn-sm" type="button">⬅ Назад</button>
+        <span id="leaderboardPageInfo" class="page-info">Страница 1</span>
+        <button id="btnLeaderboardNext" class="btn btn-secondary btn-sm" type="button">Вперёд ➡</button>
       </div>
     </div>
   </div>

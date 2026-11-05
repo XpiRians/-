@@ -113,7 +113,13 @@
   let placementOrientation = true; // true = horizontal, false = vertical
   let unplacedFleet = [];
 
-  // Match State
+  // Match State & Modes
+  let currentRoomIsRanked = false;
+  let currentLobbyMode = 'casual'; // 'casual' | 'ranked'
+  let selectedAvatarSeed = 'Admiral';
+  let leaderboardCurrentPage = 1;
+  const LEADERBOARD_PAGE_SIZE = 15;
+
   let isMyTurn = true;
   let currentRoomCode = null;
   let isRoomHost = false;
@@ -148,6 +154,10 @@
         Online.setPlayerName(nameInput.value);
       });
     }
+
+    // Initialize Supabase Auth & attach auth state change listener
+    Online.initAuth();
+    Online.onAuthStateChange(handleAuthChange);
   }
 
   function showScreen(screenId) {
@@ -174,7 +184,7 @@
   }
 
   // =========================================================================
-  // SCREEN 1: MAIN MENU
+  // SCREEN 1: MAIN MENU & AUTH WIDGET
   // =========================================================================
   function setupDOMEvents() {
     // Mode Buttons
@@ -183,6 +193,90 @@
     bindClick('btnCreateRoom', handleCreateRoom);
     bindClick('btnBrowseRooms', handleBrowseRooms);
     bindClick('btnJoinCode', handleJoinByCodeModal);
+
+    // Header Auth & Profile
+    bindClick('btnHeaderLogin', () => openAuthModal('login'));
+    bindClick('btnHeaderLogout', async () => {
+      await Online.signOut();
+      showToast('🚪 Вы вышли из аккаунта');
+    });
+    bindClick('btnHeaderProfile', () => openProfileModal());
+    bindClick('headerUserInfoBtn', () => openProfileModal());
+    bindClick('headerAvatarWrap', () => openProfileModal());
+    bindClick('btnEditProfileQuick', () => openProfileSetupModal());
+
+    // Auth Modal Multi-View Navigation & Actions
+    bindClick('btnModalCloseAuth', () => closeModal('modalAuth'));
+    bindClick('btnGoToRegister', () => switchAuthView('register'));
+    bindClick('btnGoToLogin', () => switchAuthView('login'));
+    bindClick('btnGoToForgotPassword', () => switchAuthView('forgot'));
+    bindClick('btnBackToLoginFromForgot', () => switchAuthView('login'));
+    bindClick('btnBackFromOtp', () => switchAuthView('register'));
+
+    bindClick('btnLoginSubmit', handleLoginSubmit);
+    bindClick('btnRegSubmit', handleRegisterSubmit);
+    bindClick('btnVerifyOtpSubmit', handleVerifyOtpSubmit);
+    bindClick('btnResendOtp', handleResendOtp);
+    bindClick('btnSendResetCode', handleSendResetCode);
+    bindClick('btnSubmitNewPassword', handleSubmitNewPassword);
+
+    // Enter key handling on forms
+    const loginPwd = document.getElementById('loginPassword');
+    if (loginPwd) {
+      loginPwd.addEventListener('keydown', e => { if (e.key === 'Enter') handleLoginSubmit(); });
+    }
+    const regPwdConf = document.getElementById('regPasswordConfirm');
+    if (regPwdConf) {
+      regPwdConf.addEventListener('keydown', e => { if (e.key === 'Enter') handleRegisterSubmit(); });
+    }
+
+    // OTP 6-digit input auto-formatting & auto-submit
+    const otpInput = document.getElementById('otpCodeInput');
+    if (otpInput) {
+      otpInput.addEventListener('input', () => {
+        otpInput.value = otpInput.value.replace(/\D/g, '').slice(0, 6);
+        if (otpInput.value.length === 6) {
+          handleVerifyOtpSubmit();
+        }
+      });
+      otpInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleVerifyOtpSubmit();
+      });
+    }
+
+    // Password visibility eye toggles
+    document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const targetInput = document.getElementById(targetId);
+        if (targetInput) {
+          const isPwd = targetInput.type === 'password';
+          targetInput.type = isPwd ? 'text' : 'password';
+          btn.textContent = isPwd ? '🔒' : '👁️';
+        }
+      });
+    });
+
+    // Profile Setup Modal
+    bindClick('btnSaveProfileSetup', handleSaveProfileSetup);
+    document.querySelectorAll('.avatar-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        updateAvatarPreview(btn.dataset.seed);
+      });
+    });
+
+    // Profile Modal
+    bindClick('btnModalCloseProfile', () => closeModal('modalProfile'));
+
+    // Leaderboard Modal
+    bindClick('btnModalCloseLeaderboard', () => closeModal('modalLeaderboard'));
+    bindClick('btnLeaderboardPrev', () => loadLeaderboard(leaderboardCurrentPage - 1));
+    bindClick('btnLeaderboardNext', () => loadLeaderboard(leaderboardCurrentPage + 1));
+
+    // Mode Selector Tabs
+    bindClick('tabCasual', () => setLobbyMode('casual'));
+    bindClick('tabRanked', () => setLobbyMode('ranked'));
+    bindClick('tabLeaderboard', () => loadLeaderboard(1));
 
     // Placement Controls
     bindClick('btnRotateShip', toggleOrientation);
@@ -242,10 +336,20 @@
       });
     }
 
+    const setupInput = document.getElementById('inputSetupUsername');
+    if (setupInput) {
+      setupInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSaveProfileSetup();
+      });
+    }
+
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeModal('modalJoinCode');
         closeModal('modalRoomsList');
+        closeModal('modalAuth');
+        closeModal('modalProfile');
+        closeModal('modalLeaderboard');
       }
     });
   }
@@ -272,6 +376,622 @@
   }
 
   // =========================================================================
+  // AUTH, PROFILE & ELO CONTROLLERS
+  // =========================================================================
+
+  let authPendingEmail = '';
+  let authPendingUsername = '';
+  let resendCooldownTimer = null;
+  let resendSecondsLeft = 0;
+
+  // Restore pending auth from sessionStorage if available
+  try {
+    const savedPending = sessionStorage.getItem('battleship_pending_auth');
+    if (savedPending) {
+      const parsed = JSON.parse(savedPending);
+      authPendingEmail = parsed.email || '';
+      authPendingUsername = parsed.username || '';
+    }
+  } catch (e) {}
+
+  function switchAuthView(viewName) {
+    const views = {
+      login: document.getElementById('authViewLogin'),
+      register: document.getElementById('authViewRegister'),
+      otp: document.getElementById('authViewConfirmOtp'),
+      forgot: document.getElementById('authViewForgotPassword')
+    };
+
+    const titleEl = document.getElementById('authModalTitle');
+    const titles = {
+      login: 'Штаб флота: Авторизация',
+      register: 'Штаб флота: Регистрация капитана',
+      otp: 'Штаб флота: Подтверждение почты',
+      forgot: 'Штаб флота: Сброс пароля'
+    };
+
+    Object.keys(views).forEach(k => {
+      if (views[k]) {
+        views[k].style.display = (k === viewName) ? 'block' : 'none';
+        if (k === viewName) views[k].classList.add('active');
+        else views[k].classList.remove('active');
+      }
+    });
+
+    if (titleEl && titles[viewName]) {
+      titleEl.textContent = titles[viewName];
+    }
+
+    // Reset error messages on switch
+    ['loginError', 'regError', 'otpStatusMsg', 'forgotError'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = 'none';
+        el.textContent = '';
+        el.classList.remove('success');
+      }
+    });
+
+    if (viewName === 'otp') {
+      const emailEl = document.getElementById('otpTargetEmail');
+      if (emailEl) emailEl.textContent = authPendingEmail;
+      const otpInput = document.getElementById('otpCodeInput');
+      if (otpInput) {
+        otpInput.value = '';
+        setTimeout(() => otpInput.focus(), 150);
+      }
+    }
+  }
+
+  function openAuthModal(defaultView = 'login', prefillEmail = '') {
+    if (prefillEmail) {
+      authPendingEmail = prefillEmail;
+    }
+    switchAuthView(defaultView);
+    openModal('modalAuth');
+  }
+
+  function startResendCooldown(seconds = 60) {
+    if (resendCooldownTimer) clearInterval(resendCooldownTimer);
+    resendSecondsLeft = seconds;
+    const btn = document.getElementById('btnResendOtp');
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.textContent = `Отправить код повторно (${resendSecondsLeft}с)`;
+
+    resendCooldownTimer = setInterval(() => {
+      resendSecondsLeft--;
+      if (resendSecondsLeft <= 0) {
+        clearInterval(resendCooldownTimer);
+        resendCooldownTimer = null;
+        btn.disabled = false;
+        btn.textContent = 'Отправить код повторно';
+      } else {
+        btn.textContent = `Отправить код повторно (${resendSecondsLeft}с)`;
+      }
+    }, 1000);
+  }
+
+  function showAuthError(elementId, message, isSuccess = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+    if (isSuccess) el.classList.add('success');
+    else el.classList.remove('success');
+  }
+
+  function setButtonLoading(btn, isLoading, loadingText = '') {
+    if (!btn) return;
+    btn.disabled = isLoading;
+    const textSpan = btn.querySelector('.btn-text');
+    const spinSpan = btn.querySelector('.btn-spinner');
+    if (textSpan) textSpan.style.display = isLoading ? 'none' : 'inline';
+    if (spinSpan) {
+      spinSpan.style.display = isLoading ? 'inline-block' : 'none';
+      if (loadingText) spinSpan.textContent = loadingText;
+    }
+  }
+
+  async function handleLoginSubmit() {
+    const emailInput = document.getElementById('loginEmail');
+    const pwdInput = document.getElementById('loginPassword');
+    const btn = document.getElementById('btnLoginSubmit');
+    if (!emailInput || !pwdInput) return;
+
+    const email = emailInput.value.trim();
+    const password = pwdInput.value;
+
+    if (!email || !password) {
+      showAuthError('loginError', 'Пожалуйста, укажите email и пароль');
+      return;
+    }
+
+    setButtonLoading(btn, true, '⏳ Вход в штаб...');
+    try {
+      await Online.signInWithEmail(email, password);
+      closeModal('modalAuth');
+      showToast('⚓ Добро пожаловать на капитанский мостик!', 'success');
+    } catch (err) {
+      if (err.code === 'EMAIL_NOT_CONFIRMED') {
+        authPendingEmail = err.email || email;
+        switchAuthView('otp');
+        showAuthError('otpStatusMsg', 'Электронная почта ещё не подтверждена. Введите шестизначный код из письма.');
+        startResendCooldown(60);
+      } else {
+        showAuthError('loginError', err.message || 'Ошибка входа');
+      }
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function handleRegisterSubmit() {
+    const userEl = document.getElementById('regUsername');
+    const emailEl = document.getElementById('regEmail');
+    const pwdEl = document.getElementById('regPassword');
+    const pwdConfEl = document.getElementById('regPasswordConfirm');
+    const btn = document.getElementById('btnRegSubmit');
+
+    const username = userEl ? userEl.value.trim() : '';
+    const email = emailEl ? emailEl.value.trim() : '';
+    const password = pwdEl ? pwdEl.value : '';
+    const confirm = pwdConfEl ? pwdConfEl.value : '';
+
+    if (!username || username.length < 3 || username.length > 16) {
+      showAuthError('regError', 'Позывной должен быть от 3 до 16 символов');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_а-яА-ЯёЁ]+$/.test(username)) {
+      showAuthError('regError', 'Позывной может содержать только буквы, цифры и _');
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      showAuthError('regError', 'Укажите корректный адрес электронной почты');
+      return;
+    }
+    if (!password || password.length < 6) {
+      showAuthError('regError', 'Пароль должен содержать минимум 6 символов');
+      return;
+    }
+    if (password !== confirm) {
+      showAuthError('regError', 'Пароли не совпадают');
+      return;
+    }
+
+    setButtonLoading(btn, true, '⏳ Отправка кода...');
+    try {
+      await Online.signUpWithEmail(username, email, password);
+      authPendingEmail = email;
+      authPendingUsername = username;
+      try {
+        sessionStorage.setItem('battleship_pending_auth', JSON.stringify({ email, username }));
+      } catch (e) {}
+
+      switchAuthView('otp');
+      startResendCooldown(60);
+      showToast('📩 Шестизначный код отправлен на вашу почту!', 'info');
+    } catch (err) {
+      showAuthError('regError', err.message || 'Ошибка регистрации');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function handleVerifyOtpSubmit() {
+    const codeInput = document.getElementById('otpCodeInput');
+    const btn = document.getElementById('btnVerifyOtpSubmit');
+    const code = codeInput ? codeInput.value.trim() : '';
+
+    if (!code || code.length < 6) {
+      showAuthError('otpStatusMsg', 'Введите все 6 цифр кода из письма');
+      return;
+    }
+
+    setButtonLoading(btn, true, '⏳ Активация...');
+    try {
+      await Online.verifyOtpCode(authPendingEmail, code, 'signup');
+      try {
+        sessionStorage.removeItem('battleship_pending_auth');
+      } catch (e) {}
+      closeModal('modalAuth');
+      showToast('🎉 Почта подтверждена! Добро пожаловать во флот!', 'success');
+    } catch (err) {
+      showAuthError('otpStatusMsg', err.message || 'Неверный код подтверждения');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (resendSecondsLeft > 0) return;
+    const btn = document.getElementById('btnResendOtp');
+    if (btn) btn.disabled = true;
+    try {
+      await Online.resendOtpCode(authPendingEmail, 'signup');
+      startResendCooldown(60);
+      showAuthError('otpStatusMsg', 'Новый код подтверждения успешно отправлен на почту', true);
+    } catch (err) {
+      showAuthError('otpStatusMsg', 'Ошибка повторной отправки: ' + err.message);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function handleSendResetCode() {
+    const emailEl = document.getElementById('forgotEmail');
+    const btn = document.getElementById('btnSendResetCode');
+    const email = emailEl ? emailEl.value.trim() : '';
+
+    if (!email || !email.includes('@')) {
+      showAuthError('forgotError', 'Укажите корректный email');
+      return;
+    }
+
+    setButtonLoading(btn, true, '⏳ Отправка...');
+    try {
+      await Online.resetPasswordForEmail(email);
+      const step1 = document.getElementById('forgotStep1');
+      const step2 = document.getElementById('forgotStep2');
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
+      authPendingEmail = email;
+      showAuthError('forgotError', 'Шестизначный код сброса отправлен на вашу почту. Введите код и новый пароль.', true);
+    } catch (err) {
+      showAuthError('forgotError', err.message || 'Ошибка отправки кода');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function handleSubmitNewPassword() {
+    const codeEl = document.getElementById('resetOtpCode');
+    const pwdEl = document.getElementById('resetNewPassword');
+    const btn = document.getElementById('btnSubmitNewPassword');
+
+    const code = codeEl ? codeEl.value.trim() : '';
+    const newPwd = pwdEl ? pwdEl.value : '';
+
+    if (!code || code.length < 6) {
+      showAuthError('forgotError', 'Введите шестизначный код сброса');
+      return;
+    }
+    if (!newPwd || newPwd.length < 6) {
+      showAuthError('forgotError', 'Новый пароль должен быть не менее 6 символов');
+      return;
+    }
+
+    setButtonLoading(btn, true, '⏳ Сохранение...');
+    try {
+      await Online.verifyOtpCode(authPendingEmail, code, 'recovery');
+      await Online.updateUserPassword(newPwd);
+      showToast('✅ Пароль успешно изменён! Войдите с новым паролем.', 'success');
+      switchAuthView('login');
+    } catch (err) {
+      showAuthError('forgotError', err.message || 'Ошибка изменения пароля');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  function handleAuthChange(info) {
+    const btnLogin = document.getElementById('btnHeaderLogin');
+    const userProf = document.getElementById('headerUserProfile');
+    const nameInput = document.getElementById('playerNameInput');
+    const quickEditBtn = document.getElementById('btnEditProfileQuick');
+
+    if (info && info.isAuth) {
+      if (btnLogin) btnLogin.style.display = 'none';
+      if (userProf) userProf.style.display = 'flex';
+
+      const userNameEl = document.getElementById('headerUserName');
+      const rankTierEl = document.getElementById('headerRankTier');
+      const userEloEl = document.getElementById('headerUserElo');
+      const avatarImg = document.getElementById('headerUserAvatar');
+      const rankBadge = document.getElementById('headerUserRankBadge');
+
+      const name = info.profile?.username || info.user?.user_metadata?.full_name || 'Капитан';
+      if (userNameEl) userNameEl.textContent = name;
+      if (nameInput) {
+        nameInput.value = name;
+        nameInput.readOnly = true;
+      }
+      if (quickEditBtn) quickEditBtn.style.display = 'inline-flex';
+
+      const tier = info.rankTier || Online.getRankTier(info.rating || 1000);
+      if (rankTierEl) {
+        rankTierEl.textContent = tier.name;
+        rankTierEl.style.color = tier.color;
+      }
+      if (userEloEl) userEloEl.textContent = `${info.rating || 1000} ELO`;
+      if (rankBadge) rankBadge.textContent = tier.icon;
+
+      const avatarSrc = info.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+      if (avatarImg) avatarImg.src = avatarSrc;
+
+      // First-time profile prompt if user has no registered call sign in profiles table
+      if (!info.profile || !info.profile.username) {
+        openProfileSetupModal();
+      }
+    } else {
+      if (btnLogin) btnLogin.style.display = 'inline-flex';
+      if (userProf) userProf.style.display = 'none';
+      if (nameInput) {
+        nameInput.readOnly = false;
+        nameInput.value = Online.getPlayerInfo().name || 'Адмирал';
+      }
+      if (quickEditBtn) quickEditBtn.style.display = 'none';
+      setLobbyMode('casual');
+    }
+  }
+
+  function setLobbyMode(mode) {
+    if (mode === 'ranked') {
+      const pInfo = Online.getPlayerInfo();
+      if (!pInfo.isAuth) {
+        openAuthModal('login');
+        showToast('Для рейтинговой игры необходимо войти в аккаунт капитана', 'error');
+        return;
+      }
+      if (!pInfo.profile || !pInfo.profile.username) {
+        openProfileSetupModal();
+        return;
+      }
+      currentLobbyMode = 'ranked';
+    } else {
+      currentLobbyMode = 'casual';
+    }
+
+    const tabCas = document.getElementById('tabCasual');
+    const tabRnk = document.getElementById('tabRanked');
+    const banner = document.getElementById('activeModeBanner');
+    const bannerIcon = document.getElementById('bannerModeIcon');
+    const bannerText = document.getElementById('activeModeText');
+    const quickTitle = document.getElementById('quickPlayTitle');
+    const quickDesc = document.getElementById('quickPlayDesc');
+    const quickIcon = document.getElementById('quickPlayIcon');
+
+    if (currentLobbyMode === 'ranked') {
+      if (tabCas) tabCas.classList.remove('active');
+      if (tabRnk) tabRnk.classList.add('active');
+      if (banner) banner.className = 'active-mode-banner ranked';
+      if (bannerIcon) bannerIcon.textContent = '⚔️';
+      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Рейтинговый бой</strong> — матч за очки ELO (K=32), победы идут в Зал славы.';
+      if (quickTitle) quickTitle.textContent = 'Рейтинговый подбор';
+      if (quickDesc) quickDesc.textContent = 'Случайный подбор равного по рангу капитана';
+      if (quickIcon) quickIcon.textContent = '⚔️';
+    } else {
+      if (tabCas) tabCas.classList.add('active');
+      if (tabRnk) tabRnk.classList.remove('active');
+      if (banner) banner.className = 'active-mode-banner casual';
+      if (bannerIcon) bannerIcon.textContent = '🛡️';
+      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Обычный бой</strong> — свободная игра без риска для рейтинга.';
+      if (quickTitle) quickTitle.textContent = 'Быстрая игра онлайн';
+      if (quickDesc) quickDesc.textContent = 'Мгновенный подбор случайного соперника';
+      if (quickIcon) quickIcon.textContent = '⚡';
+    }
+  }
+
+  function openProfileSetupModal() {
+    const input = document.getElementById('inputSetupUsername');
+    const pInfo = Online.getPlayerInfo();
+    const suggested = pInfo.user?.user_metadata?.full_name?.replace(/[^a-zA-Z0-9_]/g, '') ||
+                      pInfo.profile?.username || '';
+    if (input) input.value = suggested.slice(0, 16);
+
+    const errEl = document.getElementById('setupUsernameError');
+    if (errEl) errEl.style.display = 'none';
+
+    updateAvatarPreview(selectedAvatarSeed);
+    openModal('modalProfileSetup');
+  }
+
+  function updateAvatarPreview(seed) {
+    selectedAvatarSeed = seed;
+    const img = document.getElementById('setupAvatarImg');
+    if (img) {
+      img.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+    }
+    document.querySelectorAll('.avatar-chip').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.seed === seed);
+    });
+  }
+
+  async function handleSaveProfileSetup() {
+    const input = document.getElementById('inputSetupUsername');
+    const errEl = document.getElementById('setupUsernameError');
+    if (!input) return;
+
+    const val = input.value.trim();
+    if (!/^[a-zA-Z0-9_]{3,16}$/.test(val)) {
+      if (errEl) {
+        errEl.textContent = 'Позывной должен состоять из 3-16 букв, цифр или подчёркиваний.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(selectedAvatarSeed)}`;
+    const saveBtn = document.getElementById('btnSaveProfileSetup');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохранение...';
+    }
+
+    try {
+      await Online.setProfileUsername(val, avatarUrl);
+      closeModal('modalProfileSetup');
+      showToast(`🎖️ Позывной "${val}" успешно утверждён во флоте!`);
+      await Online.initAuth();
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'Ошибка сохранения позывного';
+        errEl.style.display = 'block';
+      }
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Утвердить позывной во флоте';
+      }
+    }
+  }
+
+  async function openProfileModal(targetUserId = null) {
+    const pInfo = Online.getPlayerInfo();
+    const uid = targetUserId || pInfo.user?.id;
+    if (!uid) {
+      openModal('modalAuth');
+      return;
+    }
+
+    openModal('modalProfile');
+
+    const usernameEl = document.getElementById('profUsername');
+    const avatarEl = document.getElementById('profAvatar');
+    const rankTierEl = document.getElementById('profRankTier');
+    const eloEl = document.getElementById('profElo');
+    const badgeLarge = document.getElementById('profRankBadgeLarge');
+    const winsEl = document.getElementById('profRankedWins');
+    const lossesEl = document.getElementById('profRankedLosses');
+    const winrateEl = document.getElementById('profRankedWinrate');
+    const gamesEl = document.getElementById('profRankedGames');
+    const casualEl = document.getElementById('profCasualStatsText');
+    const histEl = document.getElementById('profileHistoryContainer');
+
+    if (usernameEl) usernameEl.textContent = 'Загрузка личного дела...';
+    if (histEl) histEl.innerHTML = '<div class="history-loading">Загрузка истории матчей...</div>';
+
+    try {
+      const data = await Online.getProfile(uid);
+      const prof = data.profile || {};
+      const rat = data.ratings || {};
+      const tier = data.rank_tier || Online.getRankTier(rat.rating || 1000);
+
+      const username = prof.username || 'Капитан';
+      if (usernameEl) usernameEl.textContent = username;
+      if (avatarEl) {
+        avatarEl.src = prof.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`;
+      }
+      if (rankTierEl) {
+        rankTierEl.textContent = tier.name;
+        rankTierEl.style.color = tier.color;
+      }
+      if (eloEl) eloEl.textContent = `${rat.rating || 1000} ELO`;
+      if (badgeLarge) badgeLarge.textContent = tier.icon;
+
+      if (winsEl) winsEl.textContent = rat.wins || 0;
+      if (lossesEl) lossesEl.textContent = rat.losses || 0;
+      if (gamesEl) gamesEl.textContent = rat.games_played || 0;
+      if (winrateEl) winrateEl.textContent = `${data.winrate || 0}%`;
+      if (casualEl) {
+        casualEl.textContent = `${rat.casual_wins || 0} побед / ${rat.casual_losses || 0} поражений`;
+      }
+
+      // Render Match History List
+      const matches = data.recent_matches || [];
+      if (!matches || matches.length === 0) {
+        if (histEl) histEl.innerHTML = '<div class="history-empty">Рейтинговых боёв пока не зафиксировано</div>';
+      } else {
+        if (histEl) {
+          histEl.innerHTML = '';
+          matches.forEach(m => {
+            const isP1 = m.player1_id === uid;
+            const oppName = isP1 ? (m.p2_username || 'Соперник') : (m.p1_username || 'Соперник');
+            const oppAvatar = isP1 ? m.p2_avatar_url : m.p1_avatar_url;
+            const delta = isP1 ? m.p1_delta : m.p2_delta;
+            const isVictory = m.winner_id === uid;
+            const dateStr = m.completed_at ? new Date(m.completed_at).toLocaleDateString() : '';
+
+            const row = document.createElement('div');
+            row.className = `history-item ${isVictory ? 'win' : 'loss'}`;
+            const sign = delta > 0 ? '+' : '';
+            row.innerHTML = `
+              <div class="hist-result-tag ${isVictory ? 'win' : 'loss'}">${isVictory ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</div>
+              <div class="hist-opp-info">
+                <img class="hist-opp-avatar" src="${oppAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(oppName)}`}" alt="">
+                <span>vs <strong>${escapeHtml(oppName)}</strong></span>
+              </div>
+              <div class="hist-delta ${delta >= 0 ? 'plus' : 'minus'}">${sign}${delta} ELO</div>
+              <div class="hist-date">${dateStr}</div>
+            `;
+            histEl.appendChild(row);
+          });
+        }
+      }
+    } catch (err) {
+      if (usernameEl) usernameEl.textContent = 'Ошибка загрузки профиля';
+      if (histEl) histEl.innerHTML = `<div class="history-empty">Ошибка: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function loadLeaderboard(page = 1) {
+    leaderboardCurrentPage = Math.max(1, page);
+    openModal('modalLeaderboard');
+
+    const tbody = document.getElementById('leaderboardTableBody');
+    const pageInfo = document.getElementById('leaderboardPageInfo');
+    const prevBtn = document.getElementById('btnLeaderboardPrev');
+    const nextBtn = document.getElementById('btnLeaderboardNext');
+
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="loading-td">Загрузка Зала славы флота...</td></tr>';
+    if (pageInfo) pageInfo.textContent = `Страница ${leaderboardCurrentPage}`;
+    if (prevBtn) prevBtn.disabled = leaderboardCurrentPage <= 1;
+
+    try {
+      const offset = (leaderboardCurrentPage - 1) * LEADERBOARD_PAGE_SIZE;
+      const res = await Online.getLeaderboard(LEADERBOARD_PAGE_SIZE, offset);
+      const players = res.leaderboard || [];
+      const total = res.total_count || 0;
+      const maxPages = Math.max(1, Math.ceil(total / LEADERBOARD_PAGE_SIZE));
+
+      if (pageInfo) pageInfo.textContent = `Страница ${leaderboardCurrentPage} из ${maxPages}`;
+      if (prevBtn) prevBtn.disabled = leaderboardCurrentPage <= 1;
+      if (nextBtn) nextBtn.disabled = leaderboardCurrentPage >= maxPages || players.length < LEADERBOARD_PAGE_SIZE;
+
+      if (!players || players.length === 0) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="loading-td">В Зале славы пока нет капитанов. Сыграйте первый рейтинговый бой!</td></tr>';
+        return;
+      }
+
+      if (tbody) {
+        tbody.innerHTML = '';
+        players.forEach(p => {
+          const tr = document.createElement('tr');
+          const tier = p.rank_tier || Online.getRankTier(p.rating || 1000);
+          const medal = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+
+          tr.innerHTML = `
+            <td class="col-rank"><strong>${medal}</strong></td>
+            <td class="col-player">
+              <div class="leaderboard-player-cell" role="button" tabindex="0" title="Посмотреть личное дело">
+                <img class="leaderboard-avatar" src="${p.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(p.username)}`}" alt="">
+                <strong>${escapeHtml(p.username)}</strong>
+              </div>
+            </td>
+            <td class="col-tier">
+              <span class="rank-tag" style="color: ${tier.color};">${tier.icon} ${tier.name}</span>
+            </td>
+            <td class="col-elo"><strong>${p.rating}</strong></td>
+            <td class="col-winrate">${p.winrate}%</td>
+            <td class="col-record">${p.wins} / ${p.losses}</td>
+          `;
+
+          const playerCell = tr.querySelector('.leaderboard-player-cell');
+          if (playerCell) {
+            playerCell.addEventListener('click', () => {
+              openProfileModal(p.user_id);
+            });
+          }
+
+          tbody.appendChild(tr);
+        });
+      }
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="loading-td error">Ошибка загрузки: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  // =========================================================================
   // MATCH LAUNCHERS
   // =========================================================================
   function startAiMatch() {
@@ -288,9 +1008,20 @@
 
   async function startQuickMatch() {
     gameMode = 'online';
-    showToast('Поиск открытой комнаты...');
+    const pInfo = Online.getPlayerInfo();
+    if (!pInfo.isAuth) {
+      openAuthModal('login');
+      showToast('Для участия в онлайн-игре необходимо войти в аккаунт капитана', 'error');
+      return;
+    }
+    if (!pInfo.profile || !pInfo.profile.username) {
+      openProfileSetupModal();
+      return;
+    }
+    const isRanked = (currentLobbyMode === 'ranked');
+    showToast(isRanked ? 'Поиск рейтингового соперника...' : 'Поиск открытой комнаты...');
     try {
-      const room = await Online.quickMatch();
+      const room = await Online.quickMatch(isRanked);
       handleJoinedRoom(room);
     } catch (err) {
       showToast('⚠️ Ошибка поиска: ' + err.message, 'error');
@@ -299,8 +1030,19 @@
 
   async function handleCreateRoom() {
     gameMode = 'online';
+    const pInfo = Online.getPlayerInfo();
+    if (!pInfo.isAuth) {
+      openAuthModal('login');
+      showToast('Для создания онлайн-комнаты необходимо войти в аккаунт капитана', 'error');
+      return;
+    }
+    if (!pInfo.profile || !pInfo.profile.username) {
+      openProfileSetupModal();
+      return;
+    }
+    const isRanked = (currentLobbyMode === 'ranked');
     try {
-      const room = await Online.createRoom();
+      const room = await Online.createRoom(isRanked);
       handleJoinedRoom(room);
     } catch (err) {
       showToast('⚠️ Ошибка создания комнаты: ' + err.message, 'error');
@@ -308,6 +1050,17 @@
   }
 
   async function handleBrowseRooms() {
+    const pInfo = Online.getPlayerInfo();
+    if (!pInfo.isAuth) {
+      openAuthModal('login');
+      showToast('Для поиска онлайн-комнат необходимо войти в аккаунт капитана', 'error');
+      return;
+    }
+    if (!pInfo.profile || !pInfo.profile.username) {
+      openProfileSetupModal();
+      return;
+    }
+
     openModal('modalRoomsList');
     const listEl = document.getElementById('roomsListContainer');
     if (!listEl) return;
@@ -324,9 +1077,13 @@
       rooms.forEach(r => {
         const item = document.createElement('div');
         item.className = 'room-card-item';
+        const isRnk = Boolean(r.is_ranked);
         item.innerHTML = `
           <div class="room-card-info">
-            <strong>${escapeHtml(r.player1_name || 'Адмирал')}</strong>
+            <div class="room-name-row">
+              <strong>${escapeHtml(r.player1_name || 'Адмирал')}</strong>
+              <span class="room-mode-tag ${isRnk ? 'ranked' : 'casual'}">${isRnk ? '⚔️ Рейтинг' : '🛡️ Обычный'}</span>
+            </div>
             <span class="room-code-tag">Код: ${r.code}</span>
           </div>
           <button class="btn btn-primary btn-sm btn-join-room" data-code="${r.code}">Войти</button>
@@ -338,11 +1095,21 @@
         listEl.appendChild(item);
       });
     } catch (err) {
-      listEl.innerHTML = '<div class="rooms-empty">Ошибка загрузки комнат</div>';
+      listEl.innerHTML = '<div class="rooms-empty">Ошибка загрузки комнат: ' + escapeHtml(err.message) + '</div>';
     }
   }
 
   function handleJoinByCodeModal() {
+    const pInfo = Online.getPlayerInfo();
+    if (!pInfo.isAuth) {
+      openAuthModal('login');
+      showToast('Для входа по коду необходимо войти в аккаунт капитана', 'error');
+      return;
+    }
+    if (!pInfo.profile || !pInfo.profile.username) {
+      openProfileSetupModal();
+      return;
+    }
     const input = document.getElementById('inputJoinRoomCode');
     if (input) input.value = '';
     openModal('modalJoinCode');
@@ -357,6 +1124,16 @@
 
   async function joinByCode(code) {
     gameMode = 'online';
+    const pInfo = Online.getPlayerInfo();
+    if (!pInfo.isAuth) {
+      openAuthModal('login');
+      showToast('Для участия в онлайн-боях необходимо войти в аккаунт капитана', 'error');
+      return;
+    }
+    if (!pInfo.profile || !pInfo.profile.username) {
+      openProfileSetupModal();
+      return;
+    }
     showToast(`Подключение к ${code.toUpperCase()}...`);
     try {
       const room = await Online.joinRoom(code);
@@ -368,8 +1145,21 @@
 
   function handleJoinedRoom(room) {
     currentRoomCode = room.code;
+    currentRoomIsRanked = Boolean(room.is_ranked);
     const myId = Online.getPlayerInfo().id;
     isRoomHost = room.player1_id === myId;
+
+    // Update Lobby Mode Badge
+    const badge = document.getElementById('lobbyModeBadge');
+    if (badge) {
+      if (currentRoomIsRanked) {
+        badge.className = 'lobby-mode-badge ranked';
+        badge.textContent = '⚔️ РЕЙТИНГОВЫЙ МАТЧ (ELO)';
+      } else {
+        badge.className = 'lobby-mode-badge casual';
+        badge.textContent = '🛡️ ОБЫЧНЫЙ МАТЧ';
+      }
+    }
 
     if (room.status === 'waiting') {
       // Show waiting lobby
@@ -729,6 +1519,7 @@
         unlockPlayerTurn();
       }
     } else if (room) {
+      currentRoomIsRanked = Boolean(room.is_ranked);
       const myId = Online.getPlayerInfo().id;
       const isP1 = room.player1_id === myId;
       isMyTurn = (room.current_turn === 'player1' && isP1) || (room.current_turn === 'player2' && !isP1);
@@ -1442,6 +2233,54 @@
     const statDur = document.getElementById('statDuration');
     if (statDur) statDur.textContent = `${mins}м ${secs}с`;
 
+    // ELO Delta Banner in Modal Game Over (Ranked Matches)
+    const eloBanner = document.getElementById('gameoverEloBanner');
+    if (eloBanner) {
+      if (gameMode === 'online' && currentRoomIsRanked && currentRoomCode) {
+        eloBanner.style.display = 'block';
+        const beforeEl = document.getElementById('eloBeforeVal');
+        const deltaEl = document.getElementById('eloDeltaVal');
+        const afterEl = document.getElementById('eloAfterVal');
+        const tierEl = document.getElementById('eloTierUpdateText');
+
+        if (beforeEl) beforeEl.textContent = '...';
+        if (deltaEl) { deltaEl.textContent = '...'; deltaEl.className = 'elo-delta-pill'; }
+        if (afterEl) afterEl.textContent = '...';
+        if (tierEl) tierEl.textContent = 'Синхронизация ELO с сервером...';
+
+        Online.processMatchElo(currentRoomCode).then(res => {
+          if (res && res.success && res.elo_data) {
+            const data = res.elo_data;
+            const pInfo = Online.getPlayerInfo();
+            const isP1 = (res.winner_id ? (pInfo.user && pInfo.user.id === data.player1_id) : isRoomHost);
+            const before = isP1 ? data.p1_rating_before : data.p2_rating_before;
+            const after = isP1 ? data.p1_rating_after : data.p2_rating_after;
+            const delta = isP1 ? data.p1_delta : data.p2_delta;
+
+            if (beforeEl) beforeEl.textContent = before;
+            if (afterEl) afterEl.textContent = after;
+            if (deltaEl) {
+              const sign = delta > 0 ? '+' : '';
+              deltaEl.textContent = `${sign}${delta}`;
+              deltaEl.className = `elo-delta-pill ${delta >= 0 ? 'plus' : 'minus'}`;
+            }
+            if (tierEl) {
+              const tier = Online.getRankTier(after);
+              tierEl.textContent = `Звание: ${tier.icon} ${tier.name}`;
+            }
+            Online.initAuth();
+          } else {
+            if (tierEl) tierEl.textContent = 'Рейтинг обновлён на сервере';
+          }
+        }).catch(err => {
+          console.warn('ELO processing display:', err);
+          if (tierEl) tierEl.textContent = 'Рейтинг сохранён на сервере';
+        });
+      } else {
+        eloBanner.style.display = 'none';
+      }
+    }
+
     openModal('modalGameOver');
   }
 
@@ -1483,6 +2322,7 @@
 
   function leaveCurrentMatch() {
     closeAllModals();
+    currentRoomIsRanked = false;
     isShotLocked = false;
     lastShotTime = 0;
     setBattleState(BATTLE_STATE.MENU);
