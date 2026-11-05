@@ -529,25 +529,15 @@
   }
 
   async function handleRegisterSubmit() {
-    const userEl = document.getElementById('regUsername');
     const emailEl = document.getElementById('regEmail');
     const pwdEl = document.getElementById('regPassword');
     const pwdConfEl = document.getElementById('regPasswordConfirm');
     const btn = document.getElementById('btnRegSubmit');
 
-    const username = userEl ? userEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
     const password = pwdEl ? pwdEl.value : '';
     const confirm = pwdConfEl ? pwdConfEl.value : '';
 
-    if (!username || username.length < 3 || username.length > 16) {
-      showAuthError('regError', 'Позывной должен быть от 3 до 16 символов');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_а-яА-ЯёЁ]+$/.test(username)) {
-      showAuthError('regError', 'Позывной может содержать только буквы, цифры и _');
-      return;
-    }
     if (!email || !email.includes('@')) {
       showAuthError('regError', 'Укажите корректный адрес электронной почты');
       return;
@@ -561,14 +551,22 @@
       return;
     }
 
-    setButtonLoading(btn, true, '⏳ Отправка кода...');
+    setButtonLoading(btn, true, '⏳ Регистрация...');
     try {
-      await Online.signUpWithEmail(username, email, password);
+      const regRes = await Online.signUpWithEmail(email, password);
+
+      // Если регистрация моментальная (email-подтверждение выключено или уже подтверждено)
+      if (regRes && regRes.session) {
+        closeAllModals();
+        showToast('🎉 Регистрация успешна! Добро пожаловать!', 'success');
+        return;
+      }
+
       authPendingEmail = email;
-      authPendingUsername = username;
+      authPendingUsername = '';
       authPendingPassword = password;
       try {
-        sessionStorage.setItem('battleship_pending_auth', JSON.stringify({ email, username }));
+        sessionStorage.setItem('battleship_pending_auth', JSON.stringify({ email }));
       } catch (e) {}
 
       switchAuthView('otp');
@@ -679,7 +677,11 @@
     }
   }
 
-  function handleAuthChange(info) {
+  function handleAuthChange(eventOrInfo, maybeInfo) {
+    const info = (maybeInfo && typeof maybeInfo === 'object') 
+      ? maybeInfo 
+      : (typeof eventOrInfo === 'object' ? eventOrInfo : Online.getPlayerInfo());
+
     const btnLogin = document.getElementById('btnHeaderLogin');
     const userProf = document.getElementById('headerUserProfile');
     const nameInput = document.getElementById('playerNameInput');
@@ -696,7 +698,11 @@
       const avatarImg = document.getElementById('headerUserAvatar');
       const rankBadge = document.getElementById('headerUserRankBadge');
 
-      const name = info.profile?.username || info.user?.user_metadata?.full_name || 'Капитан';
+      const name = info.profile?.username || 
+                   info.user?.user_metadata?.username || 
+                   info.user?.user_metadata?.full_name || 
+                   'Капитан';
+
       if (userNameEl) userNameEl.textContent = name;
       if (nameInput) {
         nameInput.value = name;
@@ -715,13 +721,13 @@
       const avatarSrc = info.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`;
       if (avatarImg) avatarImg.src = avatarSrc;
 
-      // First-time profile prompt if user has no registered call sign in profiles table
+      // If player has not yet chosen their callsign, open setup modal
       if (!info.profile || !info.profile.username) {
         openProfileSetupModal();
       }
     } else {
       if (btnLogin) btnLogin.style.display = 'inline-flex';
-      if (userProf) userProf.style.display = 'none';
+      userProf.style.display = 'none';
       if (nameInput) {
         nameInput.readOnly = false;
         nameInput.value = Online.getPlayerInfo().name || 'Адмирал';
@@ -781,8 +787,9 @@
   function openProfileSetupModal() {
     const input = document.getElementById('inputSetupUsername');
     const pInfo = Online.getPlayerInfo();
-    const suggested = pInfo.user?.user_metadata?.full_name?.replace(/[^a-zA-Z0-9_]/g, '') ||
-                      pInfo.profile?.username || '';
+    const suggested = pInfo.profile?.username ||
+                      pInfo.user?.user_metadata?.username ||
+                      pInfo.user?.user_metadata?.full_name?.replace(/[^a-zA-Z0-9_]/g, '') || '';
     if (input) input.value = suggested.slice(0, 16);
 
     const errEl = document.getElementById('setupUsernameError');
@@ -809,9 +816,9 @@
     if (!input) return;
 
     const val = input.value.trim();
-    if (!/^[a-zA-Z0-9_]{3,16}$/.test(val)) {
+    if (!/^[a-zA-Z0-9_а-яА-ЯёЁ]{3,16}$/.test(val)) {
       if (errEl) {
-        errEl.textContent = 'Позывной должен состоять из 3-16 букв, цифр или подчёркиваний.';
+        errEl.textContent = 'Позывной должен состоять из 3-16 букв (латиница/кириллица), цифр или подчёркиваний.';
         errEl.style.display = 'block';
       }
       return;

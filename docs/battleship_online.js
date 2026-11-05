@@ -61,7 +61,10 @@
   function updateEffectiveIdentity() {
     if (currentAuthUser) {
       playerId = currentAuthUser.id;
-      playerName = currentProfile ? currentProfile.username : (currentAuthUser.user_metadata?.full_name || 'Капитан');
+      playerName = currentProfile?.username || 
+                   currentAuthUser.user_metadata?.username || 
+                   currentAuthUser.user_metadata?.full_name || 
+                   'Капитан';
     } else {
       playerId = guestId;
       playerName = guestName;
@@ -222,45 +225,51 @@
   }
 
   /**
-   * Register a new captain with Username, Email and Password
-   * Sends 6-digit OTP code to the provided email
+   * Register a new captain with Email and Password
+   * (Callsign and avatar are selected after email confirmation)
    */
-  async function signUpWithEmail(username, email, password) {
+  async function signUpWithEmail(arg1, arg2, arg3) {
     const sb = getSupabaseClient();
     if (!sb) throw new Error('Сетевой шлюз Supabase не инициализирован');
 
-    const cleanUsername = (username || '').trim();
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    // 1. Validate username format
-    const uCheck = await checkUsernameAvailable(cleanUsername);
-    if (!uCheck.available) {
-      throw new Error(uCheck.error);
+    let cleanEmail, password;
+    if (arg3 !== undefined) {
+      cleanEmail = (arg2 || '').trim().toLowerCase();
+      password = arg3;
+    } else {
+      cleanEmail = (arg1 || '').trim().toLowerCase();
+      password = arg2;
     }
 
-    // 2. Validate password
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Укажите корректный адрес электронной почты');
+    }
+
     if (!password || password.length < 6) {
       throw new Error('Пароль должен содержать не менее 6 символов');
     }
 
-    // 3. Supabase signUp with user metadata (username) & safe redirect
     const { data, error } = await sb.auth.signUp({
       email: cleanEmail,
       password: password,
       options: {
-        emailRedirectTo: typeof window !== 'undefined' ? window.location.href : undefined,
-        data: {
-          username: cleanUsername,
-          avatar_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`
-        }
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.href : undefined
       }
     });
 
     if (error) {
       if (error.message && (error.message.includes('already registered') || error.message.includes('User already registered'))) {
-        throw new Error('Капитан с такой почтой уже зарегистрирован. Пожалуйста, выполните вход.');
+        throw new Error('Пользователь с такой почтой уже зарегистрирован. Пожалуйста, выполните вход.');
       }
       throw error;
+    }
+
+    if (data && data.session && data.session.user) {
+      currentAuthSession = data.session;
+      currentAuthUser = data.session.user;
+      await loadUserProfileAndRatings(data.session.user.id);
+      updateEffectiveIdentity();
+      notifyAuthStateChange('SIGNED_IN');
     }
 
     return data;
@@ -430,7 +439,19 @@
       if (profiles && profiles.length > 0) {
         currentProfile = profiles[0];
       } else {
-        currentProfile = null; // Needs initial profile setup
+        // Fallback to registration metadata so the captain always has their chosen callsign
+        const metaName = currentAuthUser?.user_metadata?.username || currentAuthUser?.user_metadata?.full_name;
+        if (metaName) {
+          currentProfile = {
+            id: userId,
+            username: metaName,
+            avatar_url: currentAuthUser?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(metaName)}`
+          };
+          // Sync to database in background
+          setProfileUsername(metaName).catch(() => {});
+        } else {
+          currentProfile = null;
+        }
       }
 
       const ratings = await apiFetch(`player_ratings?user_id=eq.${userId}&limit=1`, { method: 'GET' });

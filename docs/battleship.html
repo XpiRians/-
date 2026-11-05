@@ -515,21 +515,15 @@
           </form>
         </div>
 
-        <!-- VIEW 2: REGISTER -->
+        <!-- VIEW 2: REGISTER (EMAIL + PASSWORD ONLY) -->
         <div id="authViewRegister" class="auth-view" style="display: none;">
           <div class="auth-naval-emblem">🎖️</div>
-          <h4>Регистрация капитана</h4>
+          <h4>Регистрация аккаунта</h4>
           <p class="modal-desc">
-            Создайте позывной для рейтингов и укажите email для отправки 6-значного кода подтверждения.
+            Укажите вашу почту и пароль. Позывной и аватар вы выберете сразу после подтверждения почты.
           </p>
 
           <form id="formRegister" class="auth-form" onsubmit="return false;">
-            <div class="auth-field">
-              <label for="regUsername">Боевой позывной (логин)</label>
-              <input id="regUsername" type="text" autocomplete="username" minlength="3" maxlength="16" placeholder="Например: Адмирал_Корсар" class="auth-input" required>
-              <span class="auth-field-hint">От 3 до 16 символов (буквы, цифры, _)</span>
-            </div>
-
             <div class="auth-field">
               <label for="regEmail">Электронная почта</label>
               <input id="regEmail" type="email" autocomplete="email" placeholder="captain@fleet.net" class="auth-input" required>

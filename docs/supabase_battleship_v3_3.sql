@@ -276,8 +276,13 @@ BEGIN
         v_clean_name := 'Капитан_' || substr(replace(NEW.id::text, '-', ''), 1, 4);
     END IF;
 
+    -- 2.5 Очистка осиротевших профилей с таким же позывным (если старый аккаунт был удалён из auth.users)
+    DELETE FROM public.profiles 
+    WHERE lower(username) = lower(v_clean_name) 
+      AND NOT EXISTS (SELECT 1 FROM auth.users WHERE id = public.profiles.id);
+
     -- 3. Проверка на занятость позывного (без учета регистра)
-    IF EXISTS (SELECT 1 FROM public.profiles WHERE lower(username) = lower(v_clean_name)) THEN
+    IF EXISTS (SELECT 1 FROM public.profiles WHERE lower(username) = lower(v_clean_name) AND id <> NEW.id) THEN
         v_clean_name := substr(v_clean_name, 1, 11) || '_' || substr(replace(NEW.id::text, '-', ''), 1, 4);
     END IF;
 
@@ -373,6 +378,12 @@ BEGIN
 
     -- Если позывной принадлежит текущему авторизованному пользователю
     IF auth.uid() IS NOT NULL AND auth.uid() = v_existing_id THEN
+        RETURN TRUE;
+    END IF;
+
+    -- Если старый пользователь был удалён из auth.users (осиротевший профиль) — удаляем и освобождаем
+    IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_existing_id) THEN
+        DELETE FROM public.profiles WHERE id = v_existing_id;
         RETURN TRUE;
     END IF;
 
@@ -1675,12 +1686,17 @@ BEGIN
     LIMIT 1;
 
     IF v_occupant_id IS NOT NULL THEN
+        -- Если старый пользователь был удалён из auth.users (осиротевший профиль) — удаляем и освобождаем
+        IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_occupant_id) THEN
+            DELETE FROM public.profiles WHERE id = v_occupant_id;
+            v_occupant_id := NULL;
         -- Если старый аккаунт не подтвердил почту и брошен более 24 часов назад — освобождаем позывной
-        IF v_confirmed IS NULL AND v_created < (now() - interval '24 hours') THEN
+        ELSIF v_confirmed IS NULL AND v_created < (now() - interval '24 hours') THEN
             UPDATE public.profiles
             SET username = 'Брошен_' || substr(v_occupant_id::text, 1, 8),
                 updated_at = now()
             WHERE id = v_occupant_id;
+            v_occupant_id := NULL;
         ELSE
             RETURN jsonb_build_object('success', false, 'error', 'Этот позывной уже занят другим капитаном');
         END IF;
