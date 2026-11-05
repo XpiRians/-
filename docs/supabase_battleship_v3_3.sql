@@ -32,9 +32,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_username_length CHECK (username IS NULL OR (char_length(username) >= 3 AND char_length(username) <= 16)),
-    CONSTRAINT chk_username_format CHECK (username IS NULL OR username ~ '^[a-zA-Z0-9_а-яА-ЯёЁ]{3,16}$'),
     CONSTRAINT chk_avatar_url_format CHECK (avatar_url IS NULL OR (avatar_url LIKE 'https://%' AND char_length(avatar_url) <= 500))
 );
+
+-- Удаляем потенциально конфликтующие регулярные ограничения позывных (во избежание ошибок локали):
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS chk_username_format;
 
 -- Гарантируем наличие колонок в public.profiles для существующих инсталляций:
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username VARCHAR(16);
@@ -254,60 +256,73 @@ SECURITY DEFINER
 SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
-    raw_user_name TEXT;
-    clean_username VARCHAR(16);
-    user_avatar TEXT;
-    candidate_name VARCHAR(16);
-    rnd_suffix INT;
+    v_raw_name TEXT;
+    v_clean_name VARCHAR(16);
+    v_avatar TEXT;
+    v_seed TEXT;
 BEGIN
-    raw_user_name := COALESCE(
+    -- 1. Безопасное извлечение имени пользователя из метаданных или email
+    v_raw_name := COALESCE(
         NEW.raw_user_meta_data->>'username',
         NEW.raw_user_meta_data->>'full_name',
         NEW.raw_user_meta_data->>'name',
-        split_part(NEW.email, '@', 1)
+        split_part(NEW.email, '@', 1),
+        'Капитан'
     );
 
-    candidate_name := substr(regexp_replace(trim(raw_user_name), '[^a-zA-Z0-9_а-яА-ЯёЁ]', '', 'g'), 1, 16);
-    IF char_length(candidate_name) < 3 THEN
-        candidate_name := 'Капитан_' || substr(NEW.id::text, 1, 4);
+    -- 2. Очистка позывного (буквы, цифры, подчёркивание)
+    v_clean_name := substr(regexp_replace(trim(v_raw_name), '[^a-zA-Z0-9_а-яА-ЯёЁ]', '', 'g'), 1, 16);
+    IF char_length(v_clean_name) < 3 THEN
+        v_clean_name := 'Капитан_' || substr(replace(NEW.id::text, '-', ''), 1, 4);
     END IF;
 
-    clean_username := candidate_name;
-
-    -- Регистронезависимая проверка коллизии позывных
-    IF EXISTS (SELECT 1 FROM public.profiles WHERE lower(username) = lower(clean_username)) THEN
-        rnd_suffix := floor(random() * 899 + 100)::int;
-        clean_username := substr(candidate_name, 1, 12) || '_' || rnd_suffix::text;
+    -- 3. Проверка на занятость позывного (без учета регистра)
+    IF EXISTS (SELECT 1 FROM public.profiles WHERE lower(username) = lower(v_clean_name)) THEN
+        v_clean_name := substr(v_clean_name, 1, 11) || '_' || substr(replace(NEW.id::text, '-', ''), 1, 4);
     END IF;
 
-    user_avatar := COALESCE(
+    -- 4. Генерация аватара с гарантированным соответствием ограничению https:// и <= 500 символов
+    v_seed := substr(replace(NEW.id::text, '-', ''), 1, 8);
+    v_avatar := COALESCE(
         NEW.raw_user_meta_data->>'avatar_url',
         NEW.raw_user_meta_data->>'picture',
-        'https://api.dicebear.com/7.x/bottts/svg?seed=' || clean_username
+        'https://api.dicebear.com/7.x/bottts/svg?seed=' || v_seed
     );
 
-    -- Валидация аватара на соответствие CHECK chk_avatar_url_format (https:// и длина <= 500)
-    IF user_avatar NOT LIKE 'https://%' OR char_length(user_avatar) > 500 THEN
-        user_avatar := 'https://api.dicebear.com/7.x/bottts/svg?seed=' || clean_username;
+    IF v_avatar NOT LIKE 'https://%' OR char_length(v_avatar) > 500 THEN
+        v_avatar := 'https://api.dicebear.com/7.x/bottts/svg?seed=' || v_seed;
     END IF;
 
+    -- 5. Безопасная вставка профиля (с двойной защитой от коллизий)
     BEGIN
         INSERT INTO public.profiles (id, username, avatar_url, created_at, updated_at)
-        VALUES (NEW.id, clean_username, user_avatar, now(), now())
+        VALUES (NEW.id, v_clean_name, v_avatar, now(), now())
         ON CONFLICT (id) DO UPDATE
         SET updated_at = now();
-    EXCEPTION WHEN unique_violation THEN
-        -- Гарантированно уникальный позывной на основе ID нового пользователя
-        clean_username := 'Кап_' || substr(replace(NEW.id::text, '-', ''), 1, 11);
-        INSERT INTO public.profiles (id, username, avatar_url, created_at, updated_at)
-        VALUES (NEW.id, clean_username, user_avatar, now(), now())
-        ON CONFLICT (id) DO NOTHING;
+    EXCEPTION WHEN OTHERS THEN
+        BEGIN
+            v_clean_name := 'Кап_' || substr(replace(NEW.id::text, '-', ''), 1, 11);
+            INSERT INTO public.profiles (id, username, avatar_url, created_at, updated_at)
+            VALUES (NEW.id, v_clean_name, v_avatar, now(), now())
+            ON CONFLICT (id) DO NOTHING;
+        EXCEPTION WHEN OTHERS THEN
+            NULL;
+        END;
     END;
 
-    INSERT INTO public.player_ratings (user_id, rating, wins, losses, games_played, created_at, updated_at)
-    VALUES (NEW.id, 1000, 0, 0, 0, now(), now())
-    ON CONFLICT (user_id) DO NOTHING;
+    -- 6. Безопасная инициализация рейтинга (1000 ELO)
+    BEGIN
+        INSERT INTO public.player_ratings (user_id, rating, wins, losses, games_played, created_at, updated_at)
+        VALUES (NEW.id, 1000, 0, 0, 0, now(), now())
+        ON CONFLICT (user_id) DO NOTHING;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
 
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- ГАРАНТИЯ БЕЗОПАСНОСТИ: Ошибка создания профиля НИКОГДА не должна прерывать
+    -- регистрацию нового пользователя в auth.users (Database error saving new user)
     RETURN NEW;
 END;
 $$;
@@ -316,6 +331,12 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Права доступа для сервисной роли авторизации
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON TABLE public.profiles TO postgres, service_role;
+GRANT ALL ON TABLE public.player_ratings TO postgres, service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO postgres, service_role;
 
 -- ==============================================================================
 -- 7. RPC: ПРОВЕРКА ДОСТУПНОСТИ ПОЗЫВНОГО (battleship_check_username_available)

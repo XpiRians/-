@@ -243,11 +243,12 @@
       throw new Error('Пароль должен содержать не менее 6 символов');
     }
 
-    // 3. Supabase signUp with user metadata (username)
+    // 3. Supabase signUp with user metadata (username) & safe redirect
     const { data, error } = await sb.auth.signUp({
       email: cleanEmail,
       password: password,
       options: {
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.href : undefined,
         data: {
           username: cleanUsername,
           avatar_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`
@@ -273,17 +274,30 @@
     if (!sb) throw new Error('Сетевой шлюз Supabase не инициализирован');
 
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanToken = (token || '').trim();
+    const cleanToken = (token || '').replace(/\D/g, '').trim();
 
     if (!cleanToken || cleanToken.length < 6) {
       throw new Error('Введите корректный шестизначный код подтверждения');
     }
 
-    const { data, error } = await sb.auth.verifyOtp({
+    let { data, error } = await sb.auth.verifyOtp({
       email: cleanEmail,
       token: cleanToken,
       type: type
     });
+
+    // Если 'signup' вернул ошибку, пробуем 'email' как запасной вариант
+    if (error && type === 'signup') {
+      const retry = await sb.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'email'
+      });
+      if (!retry.error && retry.data) {
+        data = retry.data;
+        error = null;
+      }
+    }
 
     if (error) {
       if (error.message && (error.message.includes('expired') || error.message.includes('invalid') || error.message.includes('Token has expired'))) {
@@ -371,7 +385,9 @@
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) throw new Error('Укажите адрес электронной почты');
 
-    const { data, error } = await sb.auth.resetPasswordForEmail(cleanEmail);
+    const { data, error } = await sb.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: typeof window !== 'undefined' ? window.location.href : undefined
+    });
     if (error) throw error;
     return data;
   }

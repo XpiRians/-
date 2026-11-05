@@ -381,6 +381,7 @@
 
   let authPendingEmail = '';
   let authPendingUsername = '';
+  let authPendingPassword = '';
   let resendCooldownTimer = null;
   let resendSecondsLeft = 0;
 
@@ -565,6 +566,7 @@
       await Online.signUpWithEmail(username, email, password);
       authPendingEmail = email;
       authPendingUsername = username;
+      authPendingPassword = password;
       try {
         sessionStorage.setItem('battleship_pending_auth', JSON.stringify({ email, username }));
       } catch (e) {}
@@ -582,7 +584,7 @@
   async function handleVerifyOtpSubmit() {
     const codeInput = document.getElementById('otpCodeInput');
     const btn = document.getElementById('btnVerifyOtpSubmit');
-    const code = codeInput ? codeInput.value.trim() : '';
+    const code = codeInput ? codeInput.value.replace(/\D/g, '').trim() : '';
 
     if (!code || code.length < 6) {
       showAuthError('otpStatusMsg', 'Введите все 6 цифр кода из письма');
@@ -681,6 +683,7 @@
     const quickEditBtn = document.getElementById('btnEditProfileQuick');
 
     if (info && info.isAuth) {
+      closeAllModals();
       if (btnLogin) btnLogin.style.display = 'none';
       if (userProf) userProf.style.display = 'flex';
 
