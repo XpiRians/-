@@ -3,196 +3,500 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Подтверждение аккаунта — Галерея Муси и Кети</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>Галерея Муси и Кети — Подтверждение аккаунта</title>
+  <link rel="icon" href="assets/icon-192.png" type="image/png">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #070b13;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-amber: #f59e0b;
+      --accent-blue: #0284c7;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --glow-blue: rgba(56, 189, 248, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at 50% 20%, #161b22 0%, #0d1117 80%, #06090d 100%);
-      color: #e6edf3;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(2, 132, 199, 0.15) 0%, transparent 70%),
+        linear-gradient(rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
     }
+
     .confirm-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 16px;
-      padding: 36px 28px;
-      max-width: 440px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px var(--glow-blue);
       position: relative;
       overflow: hidden;
     }
+
     .confirm-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #f59e0b, #58a6ff, #10b981);
+      background: linear-gradient(90deg, #f59e0b, #38bdf8, #10b981);
     }
-    .icon {
-      font-size: 48px;
-      margin-bottom: 12px;
+
+    .brand-paw {
+      font-size: 52px;
+      line-height: 1;
+      margin-bottom: 14px;
       display: inline-block;
-      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.4));
+      animation: floatPaw 3s ease-in-out infinite;
     }
-    @keyframes float {
+
+    @keyframes floatPaw {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-6px); }
     }
-    h1 {
-      color: #f59e0b;
+
+    .brand-title {
+      color: var(--accent-amber);
       font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 6px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
     }
-    .subtitle {
-      color: #8b949e;
-      font-size: 13px;
+
+    .brand-subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 20px;
-    }
-    p {
-      color: #c9d1d9;
-      font-size: 15px;
-      line-height: 1.5;
+      letter-spacing: 2px;
       margin-bottom: 24px;
     }
-    .btn {
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #38bdf8;
+      margin-bottom: 20px;
+    }
+
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .page-desc {
+      color: #cbd5e1;
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* Security check card */
+    .security-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px dashed rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .security-box-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .security-box-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .security-box-item .icon {
+      color: var(--accent-green);
+      font-weight: bold;
+    }
+
+    /* Action button */
+    .action-btn {
+      width: 100%;
+      padding: 15px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      background: #238636;
-      color: #ffffff;
-      border: none;
-      border-radius: 8px;
-      padding: 14px 28px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s, transform 0.1s;
+      gap: 10px;
+      transition: all 0.2s ease;
       text-decoration: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
-    .btn:hover { background: #2ea043; }
-    .btn:active { transform: scale(0.98); }
-    .btn:disabled {
-      background: #30363d;
-      color: #8b949e;
+
+    .btn-confirm {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-confirm:hover:not(:disabled) {
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-confirm:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
-    .status-msg {
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 8px;
+
+    .btn-secondary {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+    }
+
+    .btn-secondary:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    /* Message box */
+    .alert-box {
+      border-radius: 10px;
+      padding: 14px 18px;
       font-size: 14px;
-      display: none;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      text-align: left;
     }
-    .status-msg.success {
-      background: rgba(46, 160, 67, 0.15);
-      border: 1px solid #2ea043;
-      color: #3fb950;
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #a7f3d0;
     }
-    .status-msg.error {
-      background: rgba(248, 81, 73, 0.15);
-      border: 1px solid #f85149;
-      color: #f85149;
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
     }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fde68a;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .footer-note {
       margin-top: 24px;
-      color: #6e7681;
+      padding-top: 18px;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
       font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
     }
-    .footer-note a { color: #58a6ff; text-decoration: none; }
-    .footer-note a:hover { text-decoration: underline; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <div class="confirm-card">
-    <div class="icon">🐾</div>
-    <h1>Галерея Муси и Кети</h1>
-    <div class="subtitle">Активация аккаунта</div>
-    <p id="descText">
-      Нажмите кнопку ниже, чтобы завершить подтверждение почты и активировать доступ к играм и рейтингам:
-    </p>
+    <div class="brand-paw">🐾</div>
+    <h1 class="brand-title">Галерея Муси и Кети</h1>
+    <div class="brand-subtitle">Центр безопасной авторизации</div>
 
-    <button id="btnConfirm" class="btn">
-      <span>Подтвердить аккаунт</span>
-    </button>
+    <!-- STATE 1: READY TO CONFIRM (Requires real human click) -->
+    <div id="stateReady">
+      <div class="status-badge">
+        <span class="dot"></span>
+        <span>Защита от почтовых роботов</span>
+      </div>
 
-    <div id="statusBox" class="status-msg"></div>
+      <p class="page-desc">
+        Вы активируете аккаунт для доступа ко всем залам Галереи и сетевой игре <strong>Морской Бой</strong>.
+      </p>
+
+      <div class="security-box">
+        <div class="security-box-item">
+          <span class="icon">✓</span>
+          <span>Защищённый криптографический токен</span>
+        </div>
+        <div class="security-box-item">
+          <span class="icon">✓</span>
+          <span>Почтовые сканеры и боты заблокированы</span>
+        </div>
+        <div class="security-box-item">
+          <span class="icon">✓</span>
+          <span>Активация выполняется только по вашему клику</span>
+        </div>
+      </div>
+
+      <button id="btnConfirmHuman" class="action-btn btn-confirm" type="button">
+        <span id="btnConfirmIcon">🛡️</span>
+        <span id="btnConfirmText">Я человек — Подтвердить аккаунт</span>
+      </button>
+    </div>
+
+    <!-- STATE 2: SUCCESS -->
+    <div id="stateSuccess" style="display: none;">
+      <div class="alert-box alert-success">
+        <strong>🎉 Почта успешно подтверждена!</strong><br>
+        Добро пожаловать в Галерею! Ваш капитанский профиль активирован, стартовый рейтинг 1000 ELO начислен.
+      </div>
+      <p class="page-desc" id="redirectCountdownText">
+        Перенаправление в игру через <strong id="countdownNum">2</strong> сек...
+      </p>
+      <a href="battleship.html" class="action-btn btn-confirm">
+        🚀 Перейти в Морской Бой
+      </a>
+    </div>
+
+    <!-- STATE 3: ERROR / EXPIRED -->
+    <div id="stateError" style="display: none;">
+      <div id="errorMessage" class="alert-box alert-error">
+        <strong>⚠️ Ссылка недействительна или истёк срок её действия.</strong>
+      </div>
+      <p class="page-desc">
+        Если вы уже подтверждали почту ранее, вы можете сразу войти под своим логином и паролем.
+      </p>
+      <a href="battleship.html" class="action-btn btn-secondary">
+        ⚓ Перейти к входу в Морской Бой
+      </a>
+    </div>
+
+    <!-- STATE 4: NO TOKEN PROVIDED -->
+    <div id="stateNoToken" style="display: none;">
+      <div class="alert-box alert-warning">
+        <strong>ℹ️ Ключ подтверждения не найден.</strong><br>
+        Эта страница открывается автоматически при переходе по защищённой ссылке из письма с подтверждением.
+      </div>
+      <a href="battleship.html" class="action-btn btn-secondary">
+        ⚓ На главную страницу Морского Боя
+      </a>
+    </div>
 
     <div class="footer-note">
       Хранительницы архива — Муся и Кети.<br>
-      <a href="battleship.html">Вернуться в Морской бой</a>
+      Сессия будет сохранена в вашем браузере.
     </div>
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://hxdwavbtjhxbyfcimctz.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_uWgTHdlA9dZeOQhgaL36Nw_GgVH5LvI';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    (function() {
+      'use strict';
 
-    const btn = document.getElementById('btnConfirm');
-    const statusBox = document.getElementById('statusBox');
-    const descText = document.getElementById('descText');
+      const SUPABASE_URL = 'https://hxdwavbtjhxbyfcimctz.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_uWgTHdlA9dZeOQhgaL36Nw_GgVH5LvI';
 
-    // Extract token_hash and type from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenHash = urlParams.get('token_hash');
-    const type = urlParams.get('type') || 'signup';
-
-    if (!tokenHash) {
-      descText.textContent = 'Ссылка не содержит токена подтверждения или уже была использована.';
-      btn.style.display = 'none';
-      statusBox.className = 'status-msg error';
-      statusBox.style.display = 'block';
-      statusBox.textContent = 'Не найден токен подтверждения. Попробуйте войти в аккаунт или зарегистрироваться снова.';
-    }
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      btn.textContent = '⏳ Подтверждение...';
-      statusBox.style.display = 'none';
-
-      try {
-        const { data, error } = await sb.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: type
+      let sb = null;
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
         });
-
-        if (error) throw error;
-
-        statusBox.className = 'status-msg success';
-        statusBox.style.display = 'block';
-        statusBox.textContent = '🎉 Аккаунт успешно активирован! Перенаправляем в игру...';
-        btn.textContent = '✓ Подтверждено';
-
-        setTimeout(() => {
-          window.location.href = 'battleship.html';
-        }, 1200);
-      } catch (err) {
-        statusBox.className = 'status-msg error';
-        statusBox.style.display = 'block';
-        statusBox.textContent = 'Ошибка: ' + (err.message || 'Не удалось подтвердить аккаунт');
-        btn.disabled = false;
-        btn.textContent = 'Попробовать снова';
       }
-    });
-  </script>
 
+      // DOM Elements
+      const stateReady = document.getElementById('stateReady');
+      const stateSuccess = document.getElementById('stateSuccess');
+      const stateError = document.getElementById('stateError');
+      const stateNoToken = document.getElementById('stateNoToken');
+      const errorMessage = document.getElementById('errorMessage');
+      const btnConfirmHuman = document.getElementById('btnConfirmHuman');
+      const btnConfirmIcon = document.getElementById('btnConfirmIcon');
+      const btnConfirmText = document.getElementById('btnConfirmText');
+      const countdownNum = document.getElementById('countdownNum');
+
+      function showState(target) {
+        stateReady.style.display = 'none';
+        stateSuccess.style.display = 'none';
+        stateError.style.display = 'none';
+        stateNoToken.style.display = 'none';
+        if (target) target.style.display = 'block';
+      }
+
+      // Parse URL parameters (both query string ? and hash #)
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, '?'));
+
+      const token_hash = searchParams.get('token_hash') || searchParams.get('token') || hashParams.get('token_hash');
+      const type = searchParams.get('type') || hashParams.get('type') || 'signup';
+      const email = searchParams.get('email') || hashParams.get('email');
+
+      // Check if user has hash-based error from Supabase
+      const hashError = hashParams.get('error') || searchParams.get('error');
+      const hashErrorDesc = hashParams.get('error_description') || searchParams.get('error_description');
+
+      // Check if user already has an active session
+      if (sb) {
+        sb.auth.getSession().then(({ data: { session } }) => {
+          if (session && session.user && session.user.email_confirmed_at) {
+            // Already confirmed and logged in!
+            showSuccessAndRedirect();
+          }
+        }).catch(() => {});
+      }
+
+      // If no token at all was passed
+      if (!token_hash && !hashError) {
+        showState(stateNoToken);
+        return;
+      }
+
+      // If URL already arrived with an error
+      if (hashError) {
+        showState(stateError);
+        if (hashErrorDesc) {
+          errorMessage.innerHTML = '<strong>⚠️ Ошибка ссылки:</strong><br>' + decodeURIComponent(hashErrorDesc).replace(/\+/g, ' ');
+        }
+        return;
+      }
+
+      // Anti-bot Human Click Handler
+      btnConfirmHuman.addEventListener('click', async function(e) {
+        // Basic bot check: must be a trusted user event
+        if (e && e.isTrusted === false) {
+          return;
+        }
+
+        btnConfirmHuman.disabled = true;
+        btnConfirmIcon.innerHTML = '<span class="spinner"></span>';
+        btnConfirmText.textContent = 'Проверка ключа безопасности...';
+
+        try {
+          if (!sb) {
+            throw new Error('Не удалось подключиться к серверу авторизации.');
+          }
+
+          let verifyResult = null;
+
+          // 1. Try verifyOtp with token_hash (standard modern flow)
+          if (token_hash) {
+            verifyResult = await sb.auth.verifyOtp({
+              token_hash: token_hash,
+              type: type
+            });
+
+            // If 'signup' fails, retry with 'email' (handles magiclink/email variations)
+            if (verifyResult.error && type === 'signup') {
+              const retry = await sb.auth.verifyOtp({
+                token_hash: token_hash,
+                type: 'email'
+              });
+              if (!retry.error) {
+                verifyResult = retry;
+              }
+            }
+          } else if (email && searchParams.get('token')) {
+            // 2. Fallback to email + token
+            verifyResult = await sb.auth.verifyOtp({
+              email: email,
+              token: searchParams.get('token'),
+              type: type
+            });
+          }
+
+          if (verifyResult && verifyResult.error) {
+            // If already confirmed or session exists, treat as success
+            const msg = verifyResult.error.message || '';
+            if (msg.includes('already confirmed') || msg.includes('already verified')) {
+              showSuccessAndRedirect();
+              return;
+            }
+            throw verifyResult.error;
+          }
+
+          // Verified successfully!
+          showSuccessAndRedirect();
+        } catch (err) {
+          console.error('Confirmation error:', err);
+          showState(stateError);
+          const raw = err.message || '';
+          if (raw.includes('expired') || raw.includes('invalid') || raw.includes('Token has expired')) {
+            errorMessage.innerHTML = '<strong>⚠️ Ссылка устарела или уже была использована.</strong><br>Если вы уже подтверждали аккаунт — просто войдите в игру.';
+          } else {
+            errorMessage.innerHTML = '<strong>⚠️ Ошибка подтверждения:</strong><br>' + raw;
+          }
+        }
+      });
+
+      function showSuccessAndRedirect() {
+        showState(stateSuccess);
+        let seconds = 2;
+        if (countdownNum) countdownNum.textContent = seconds;
+
+        const timer = setInterval(() => {
+          seconds--;
+          if (countdownNum) countdownNum.textContent = seconds;
+          if (seconds <= 0) {
+            clearInterval(timer);
+            window.location.href = 'battleship.html';
+          }
+        }, 1000);
+      }
+    })();
+  </script>
 </body>
 </html>

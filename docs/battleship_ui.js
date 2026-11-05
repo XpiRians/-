@@ -573,7 +573,7 @@
 
       switchAuthView('otp');
       startResendCooldown(60);
-      showToast('📩 Шестизначный код отправлен на вашу почту!', 'info');
+      showToast('📩 Письмо с подтверждением отправлено на вашу почту!', 'info');
     } catch (err) {
       showAuthError('regError', err.message || 'Ошибка регистрации');
     } finally {
@@ -582,25 +582,28 @@
   }
 
   async function handleVerifyOtpSubmit() {
-    const codeInput = document.getElementById('otpCodeInput');
     const btn = document.getElementById('btnVerifyOtpSubmit');
-    const code = codeInput ? codeInput.value.replace(/\D/g, '').trim() : '';
-
-    if (!code || code.length < 6) {
-      showAuthError('otpStatusMsg', 'Введите все 6 цифр кода из письма');
-      return;
-    }
-
-    setButtonLoading(btn, true, '⏳ Активация...');
+    setButtonLoading(btn, true, '⏳ Проверка...');
     try {
-      await Online.verifyOtpCode(authPendingEmail, code, 'signup');
-      try {
-        sessionStorage.removeItem('battleship_pending_auth');
-      } catch (e) {}
-      closeModal('modalAuth');
-      showToast('🎉 Почта подтверждена! Добро пожаловать во флот!', 'success');
+      if (authPendingPassword) {
+        await Online.signInWithEmail(authPendingEmail, authPendingPassword);
+      } else {
+        await Online.initAuth();
+      }
+      const info = Online.getPlayerInfo();
+      if (info && info.isAuth) {
+        try { sessionStorage.removeItem('battleship_pending_auth'); } catch (e) {}
+        closeModal('modalAuth');
+        showToast('🎉 Добро пожаловать! Аккаунт подтверждён!', 'success');
+        return;
+      }
+      showAuthError('otpStatusMsg', 'Почта ещё не подтверждена. Пожалуйста, откройте письмо и нажмите «Подтвердить аккаунт».');
     } catch (err) {
-      showAuthError('otpStatusMsg', err.message || 'Неверный код подтверждения');
+      if (err.code === 'EMAIL_NOT_CONFIRMED' || (err.message && err.message.includes('not confirmed'))) {
+        showAuthError('otpStatusMsg', 'Почта ещё не подтверждена. Откройте письмо и нажмите «Подтвердить аккаунт».');
+      } else {
+        showAuthError('otpStatusMsg', err.message || 'Ошибка входа');
+      }
     } finally {
       setButtonLoading(btn, false);
     }
@@ -613,7 +616,7 @@
     try {
       await Online.resendOtpCode(authPendingEmail, 'signup');
       startResendCooldown(60);
-      showAuthError('otpStatusMsg', 'Новый код подтверждения успешно отправлен на почту', true);
+      showAuthError('otpStatusMsg', 'Письмо с подтверждением повторно отправлено на вашу почту', true);
     } catch (err) {
       showAuthError('otpStatusMsg', 'Ошибка повторной отправки: ' + err.message);
       if (btn) btn.disabled = false;
