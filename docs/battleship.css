@@ -804,6 +804,27 @@
   border: 1px dashed #38bdf8 !important;
 }
 
+/* Board Lock & Anti-Spam Firing Protection */
+.board-locked {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.board-locked .radar-cell {
+  cursor: not-allowed !important;
+}
+
+.cell-firing {
+  pointer-events: none !important;
+  animation: cellPulseShot 0.4s ease-out;
+}
+
+@keyframes cellPulseShot {
+  0% { transform: scale(1); filter: brightness(1.6); }
+  50% { transform: scale(1.1); filter: brightness(2); }
+  100% { transform: scale(1); }
+}
+
 /* Combat Log */
 .battle-combat-log {
   background: rgba(15, 23, 42, 0.85);

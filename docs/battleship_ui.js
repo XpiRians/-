@@ -42,6 +42,7 @@
 
   function setBattleState(newState) {
     currentBattleState = newState;
+    updateBoardInteractivity();
     if (stateWatchdogTimer) {
       clearTimeout(stateWatchdogTimer);
       stateWatchdogTimer = null;
@@ -61,6 +62,7 @@
             updateTurnStatusUI();
             renderBattleBoards();
             startTurnTimer();
+            unlockPlayerTurn();
           } else {
             setBattleState(BATTLE_STATE.AI_THINKING);
             updateTurnStatusUI();
@@ -72,9 +74,37 @@
           setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
           updateTurnStatusUI();
           renderBattleBoards();
+          if (isMyTurn) unlockPlayerTurn();
         }
       }, 3000);
     }
+  }
+
+  // Anti-Spam Firing Lock (0.7s delay)
+  const SHOT_COOLDOWN_MS = 700;
+  let lastShotTime = 0;
+  let isShotLocked = false;
+
+  function updateBoardInteractivity() {
+    const oppBoard = document.getElementById('oppRadarBoardGrid');
+    if (!oppBoard) return;
+    const canShoot = (currentBattleState === BATTLE_STATE.PLAYER_TURN) && isMyTurn && !isShotLocked;
+    if (canShoot) {
+      oppBoard.classList.remove('board-locked');
+      oppBoard.style.pointerEvents = 'auto';
+    } else {
+      oppBoard.classList.add('board-locked');
+      oppBoard.style.pointerEvents = 'none';
+    }
+  }
+
+  function unlockPlayerTurn() {
+    const elapsed = Date.now() - lastShotTime;
+    const delay = Math.max(0, SHOT_COOLDOWN_MS - elapsed);
+    setTimeout(() => {
+      isShotLocked = false;
+      updateBoardInteractivity();
+    }, delay);
   }
 
   // Current State
@@ -682,6 +712,8 @@
     consecutiveTimeouts = 0;
     onlineAppliedShots = 0;
     onlineSunkOpponentShips = [];
+    isShotLocked = false;
+    lastShotTime = 0;
     matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: Date.now(), endTime: 0 };
 
     if (gameMode === 'ai') {
@@ -694,6 +726,7 @@
         triggerAiTurn();
       } else {
         setBattleState(BATTLE_STATE.PLAYER_TURN);
+        unlockPlayerTurn();
       }
     } else if (room) {
       const myId = Online.getPlayerInfo().id;
@@ -702,6 +735,7 @@
       setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
       serverTurnDeadline = room.turn_deadline ? new Date(room.turn_deadline).getTime() : Date.now() + 25000;
       updateTurnStatusUI();
+      if (isMyTurn) unlockPlayerTurn();
     }
 
     renderBattleBoards();
@@ -938,7 +972,10 @@
           }
         } else {
           // Unexplored: clickable when it's our turn!
-          cell.addEventListener('click', () => handlePlayerShot(x, y, cell));
+          cell.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handlePlayerShot(x, y, cell);
+          });
         }
 
         el.appendChild(cell);
@@ -950,6 +987,9 @@
   // FIRING LOGIC & ANIMATIONS
   // =========================================================================
   async function handlePlayerShot(x, y, targetCell) {
+    const now = Date.now();
+    // Anti-spam cooldown check: ignore rapid repeated clicks within 0.7s
+    if (isShotLocked || (now - lastShotTime < SHOT_COOLDOWN_MS)) return;
     if (currentBattleState !== BATTLE_STATE.PLAYER_TURN || !isMyTurn) return;
     if (opponentBoard.grid[y][x] === CELL_STATE.HIT ||
         opponentBoard.grid[y][x] === CELL_STATE.MISS ||
@@ -957,11 +997,20 @@
       return;
     }
 
-    // Set state to ANIMATING to lock interactions and stop turn timer countdown
-    setBattleState(BATTLE_STATE.PLAYER_ANIMATING);
-    if (turnTimerId) clearInterval(turnTimerId);
+    // Lock interactions immediately and record timestamp
+    lastShotTime = now;
+    isShotLocked = true;
     isMyTurn = false;
     consecutiveTimeouts = 0;
+    setBattleState(BATTLE_STATE.PLAYER_ANIMATING);
+    updateBoardInteractivity();
+
+    if (targetCell) {
+      targetCell.classList.add('cell-firing');
+      targetCell.style.pointerEvents = 'none';
+    }
+
+    if (turnTimerId) clearInterval(turnTimerId);
     Audio.playShotCannon();
 
     // Source coordinates from my board
@@ -990,6 +1039,7 @@
           setBattleState(BATTLE_STATE.PLAYER_TURN);
           startTurnTimer();
           updateTurnStatusUI();
+          unlockPlayerTurn();
           return;
         }
 
@@ -1005,6 +1055,7 @@
           setBattleState(BATTLE_STATE.PLAYER_TURN);
           startTurnTimer();
           updateTurnStatusUI();
+          unlockPlayerTurn();
         } else if (shotResult.result === 'sunk') {
           matchStats.hits++;
           matchStats.shipsDestroyed++;
@@ -1026,6 +1077,7 @@
           setBattleState(BATTLE_STATE.PLAYER_TURN);
           startTurnTimer();
           updateTurnStatusUI();
+          unlockPlayerTurn();
         } else {
           // Miss!
           matchStats.misses++;
@@ -1034,10 +1086,11 @@
           appendCombatLog(`Залп по ${formatCoordinate(x, y)}: Мимо. Ход переходит противнику.`);
           renderBattleBoards();
 
-          // Pass turn to AI
+          // Pass turn to AI (board remains locked until AI finishes and misses)
           isMyTurn = false;
           setBattleState(BATTLE_STATE.AI_THINKING);
           updateTurnStatusUI();
+          updateBoardInteractivity();
           startTurnTimer();
           triggerAiTurn();
         }
@@ -1150,6 +1203,7 @@
           setBattleState(BATTLE_STATE.PLAYER_TURN);
           updateTurnStatusUI();
           startTurnTimer();
+          unlockPlayerTurn();
         }
       });
     }, 600 + Math.random() * 300);
@@ -1160,8 +1214,16 @@
       const res = await Online.fireShot(currentRoomCode, x, y);
       if (!res.success) {
         showToast('⚠️ ' + (res.error || 'Ошибка выстрела'), 'error');
-        isMyTurn = true;
-        setBattleState(BATTLE_STATE.PLAYER_TURN);
+        if (res.error && res.error.includes('ход противника')) {
+          isMyTurn = false;
+          setBattleState(BATTLE_STATE.ONLINE_WAITING);
+          isShotLocked = true;
+          updateBoardInteractivity();
+        } else {
+          isMyTurn = true;
+          setBattleState(BATTLE_STATE.PLAYER_TURN);
+          unlockPlayerTurn();
+        }
         updateTurnStatusUI();
         startTurnTimer();
         return;
@@ -1202,6 +1264,7 @@
         setBattleState(BATTLE_STATE.PLAYER_TURN);
         updateTurnStatusUI();
         startTurnTimer();
+        unlockPlayerTurn();
       } else {
         matchStats.misses++;
         Audio.playWaterSplash();
@@ -1214,14 +1277,12 @@
         isMyTurn = false;
         setBattleState(BATTLE_STATE.ONLINE_WAITING);
         updateTurnStatusUI();
+        updateBoardInteractivity();
         startTurnTimer();
       }
     } catch (e) {
       showToast('⚠️ ' + (e.message || 'Ошибка сети при выстреле'), 'error');
-      isMyTurn = true;
-      setBattleState(BATTLE_STATE.PLAYER_TURN);
-      updateTurnStatusUI();
-      startTurnTimer();
+      unlockPlayerTurn();
     }
   }
 
@@ -1303,6 +1364,12 @@
     isMyTurn = (room.current_turn === 'player1' && isP1) || (room.current_turn === 'player2' && !isP1);
     setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
     updateTurnStatusUI();
+    if (isMyTurn) {
+      unlockPlayerTurn();
+    } else {
+      isShotLocked = true;
+      updateBoardInteractivity();
+    }
   }
 
   function appendCombatLog(msg) {
@@ -1322,7 +1389,9 @@
   // =========================================================================
   function endMatch(isVictory, subtitle = '') {
     if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
+    isShotLocked = true;
     setBattleState(BATTLE_STATE.GAME_OVER);
+    updateBoardInteractivity();
     if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
     if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
     if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
@@ -1394,6 +1463,8 @@
 
   function handleRematch() {
     closeAllModals();
+    isShotLocked = false;
+    lastShotTime = 0;
     if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
     if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
     if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
@@ -1412,7 +1483,10 @@
 
   function leaveCurrentMatch() {
     closeAllModals();
+    isShotLocked = false;
+    lastShotTime = 0;
     setBattleState(BATTLE_STATE.MENU);
+    updateBoardInteractivity();
     if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
     if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
     if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
