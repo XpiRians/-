@@ -92,7 +92,8 @@
   let prepTimerId = null;
   let prepTimeLeft = 120;
   let consecutiveTimeouts = 0;
-  let matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: 0 };
+  let matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: 0, endTime: 0 };
+  let onlineSunkOpponentShips = [];
   let onlinePollInterval = null;
   let onlineAppliedShots = 0;
   let serverTurnDeadline = null;
@@ -120,6 +121,7 @@
   }
 
   function showScreen(screenId) {
+    closeAllModals();
     activeScreen = screenId;
     document.querySelectorAll('.screen-container').forEach(sc => {
       sc.style.display = 'none';
@@ -173,7 +175,6 @@
     bindClick('btnRematch', handleRematch);
     bindClick('btnReturnMenu', () => {
       leaveCurrentMatch();
-      showScreen('menu');
     });
 
     // Sound toggle
@@ -181,6 +182,41 @@
       const muted = Audio.toggleMute();
       const btn = document.getElementById('btnToggleSound');
       if (btn) btn.textContent = muted ? '🔇' : '🔊';
+    });
+
+    // Modals Backdrop Click: clicking outside modal card closes it
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          if (overlay.id === 'modalGameOver') {
+            leaveCurrentMatch();
+          } else {
+            closeModal(overlay.id);
+          }
+        }
+      });
+    });
+
+    // Keyboard shortcuts: Enter in inputs & Escape for modals
+    const joinInput = document.getElementById('inputJoinRoomCode');
+    if (joinInput) {
+      joinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitJoinCode();
+      });
+    }
+
+    const nameInput = document.getElementById('playerNameInput');
+    if (nameInput) {
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') nameInput.blur();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal('modalJoinCode');
+        closeModal('modalRoomsList');
+      }
     });
   }
 
@@ -197,6 +233,12 @@
   function closeModal(id) {
     const m = document.getElementById(id);
     if (m) m.classList.remove('active');
+  }
+
+  function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    const introOverlay = document.getElementById('battleIntroOverlay');
+    if (introOverlay) introOverlay.style.display = 'none';
   }
 
   // =========================================================================
@@ -329,9 +371,11 @@
     if (onlinePollInterval) clearInterval(onlinePollInterval);
     onlinePollInterval = setInterval(async () => {
       if (gameMode !== 'online' || !currentRoomCode) return;
+      if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
       try {
         const room = await Online.getRoom(currentRoomCode);
         if (!room) return;
+        if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
 
         if (activeScreen === 'lobby' && room.status === 'placement') {
           handleJoinedRoom(room);
@@ -633,11 +677,12 @@
   }
 
   function startBattlePhase(room = null) {
-    if (prepTimerId) clearInterval(prepTimerId);
+    if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
     showScreen('battle');
     consecutiveTimeouts = 0;
     onlineAppliedShots = 0;
-    matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: Date.now() };
+    onlineSunkOpponentShips = [];
+    matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: Date.now(), endTime: 0 };
 
     if (gameMode === 'ai') {
       serverTurnDeadline = null;
@@ -710,6 +755,17 @@
 
       syncTimerTick();
       turnTimerId = setInterval(syncTimerTick, 250);
+    }
+  }
+
+  function updateTurnTimerUI() {
+    const el = document.getElementById('turnTimerDisplay');
+    if (!el) return;
+    el.textContent = `${turnTimeLeft}с`;
+    if (turnTimeLeft <= 5) {
+      el.classList.add('timer-warning');
+    } else {
+      el.classList.remove('timer-warning');
     }
   }
 
@@ -794,17 +850,28 @@
   function updateFleetCountersUI() {
     // Player remaining ships
     const myRemain = playerBoard.getRemainingShipsCount();
-    document.getElementById('myShips4').textContent = myRemain[4];
-    document.getElementById('myShips3').textContent = myRemain[3];
-    document.getElementById('myShips2').textContent = myRemain[2];
-    document.getElementById('myShips1').textContent = myRemain[1];
+    const my4 = document.getElementById('myShips4'); if (my4) my4.textContent = myRemain[4];
+    const my3 = document.getElementById('myShips3'); if (my3) my3.textContent = myRemain[3];
+    const my2 = document.getElementById('myShips2'); if (my2) my2.textContent = myRemain[2];
+    const my1 = document.getElementById('myShips1'); if (my1) my1.textContent = myRemain[1];
 
     // Enemy remaining ships
-    const oppRemain = opponentBoard.getRemainingShipsCount();
-    document.getElementById('oppShips4').textContent = oppRemain[4];
-    document.getElementById('oppShips3').textContent = oppRemain[3];
-    document.getElementById('oppShips2').textContent = oppRemain[2];
-    document.getElementById('oppShips1').textContent = oppRemain[1];
+    let oppRemain;
+    if (gameMode === 'ai' && opponentBoard.ships && opponentBoard.ships.length > 0) {
+      oppRemain = opponentBoard.getRemainingShipsCount();
+    } else {
+      oppRemain = { 4: 1, 3: 2, 2: 3, 1: 4 };
+      for (const t of onlineSunkOpponentShips) {
+        if (t === 'battleship' || t === 'линкор') oppRemain[4] = Math.max(0, oppRemain[4] - 1);
+        else if (t === 'cruiser' || t === 'крейсер') oppRemain[3] = Math.max(0, oppRemain[3] - 1);
+        else if (t === 'destroyer' || t === 'эсминец') oppRemain[2] = Math.max(0, oppRemain[2] - 1);
+        else if (t === 'boat' || t === 'катер') oppRemain[1] = Math.max(0, oppRemain[1] - 1);
+      }
+    }
+    const opp4 = document.getElementById('oppShips4'); if (opp4) opp4.textContent = oppRemain[4];
+    const opp3 = document.getElementById('oppShips3'); if (opp3) opp3.textContent = oppRemain[3];
+    const opp2 = document.getElementById('oppShips2'); if (opp2) opp2.textContent = oppRemain[2];
+    const opp1 = document.getElementById('oppShips1'); if (opp1) opp1.textContent = oppRemain[1];
   }
 
   function renderBattleBoards() {
@@ -1109,6 +1176,12 @@
 
       if (res.result === 'hit' || res.result === 'sunk') {
         matchStats.hits++;
+        if (res.result === 'sunk') {
+          matchStats.shipsDestroyed++;
+          if (res.ship_type && !onlineSunkOpponentShips.includes(res.ship_type.toLowerCase())) {
+            onlineSunkOpponentShips.push(res.ship_type.toLowerCase());
+          }
+        }
         Audio.playExplosionHit();
         fx.spawnExplosion(toX, toY, res.result === 'sunk');
         if (res.result === 'sunk') Audio.playShipSunkHorn();
@@ -1117,6 +1190,7 @@
         const shipName = res.ship_type ? res.ship_type.toUpperCase() : 'КОРАБЛЬ';
         appendCombatLog(`Залп по ${formatCoordinate(x, y)}: ${res.result === 'sunk' ? shipName + ' ПОТОПЛЕН!' : 'ПОПАДАНИЕ!'}`);
         renderBattleBoards();
+        updateFleetCountersUI();
 
         if (res.all_sunk) {
           endMatch(res.winner === (isRoomHost ? 'player1' : 'player2'), 'Все вражеские корабли уничтожены!');
@@ -1153,11 +1227,16 @@
 
   function syncOnlineBattleState(room) {
     if (!room) return;
+    if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
 
     if (room.status === 'finished') {
       const myId = Online.getPlayerInfo().id;
       const iWon = (room.winner === 'player1' && room.player1_id === myId) ||
                    (room.winner === 'player2' && room.player2_id === myId);
+      const oppFleet = isRoomHost ? room.player2_fleet : room.player1_fleet;
+      if (oppFleet && (!opponentBoard.ships || opponentBoard.ships.length === 0)) {
+        opponentBoard.deserializeFleet(oppFleet);
+      }
       endMatch(iWon, iWon ? 'Победа! Вы уничтожили флот противника!' : 'Поражение. Ваш флот уничтожен.');
       return;
     }
@@ -1209,6 +1288,9 @@
           } else {
             opponentBoard.grid[shot.y][shot.x] = CELL_STATE.MISS;
           }
+          if (shot.result === 'sunk' && shot.ship_type && !onlineSunkOpponentShips.includes(shot.ship_type.toLowerCase())) {
+            onlineSunkOpponentShips.push(shot.ship_type.toLowerCase());
+          }
         }
       }
       onlineAppliedShots = history.length;
@@ -1239,10 +1321,22 @@
   // GAME OVER & STATS
   // =========================================================================
   function endMatch(isVictory, subtitle = '') {
+    if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
     setBattleState(BATTLE_STATE.GAME_OVER);
-    if (turnTimerId) clearInterval(turnTimerId);
-    if (prepTimerId) clearInterval(prepTimerId);
-    if (stateWatchdogTimer) clearTimeout(stateWatchdogTimer);
+    if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
+    if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
+    if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
+    if (onlinePollInterval) { clearInterval(onlinePollInterval); onlinePollInterval = null; }
+
+    const timerEl = document.getElementById('turnTimerDisplay');
+    if (timerEl) {
+      timerEl.classList.remove('timer-warning');
+      timerEl.textContent = '—';
+    }
+
+    if (!matchStats.endTime) {
+      matchStats.endTime = Date.now();
+    }
 
     if (isVictory) {
       Audio.playVictoryFanfare();
@@ -1261,18 +1355,23 @@
     }
     if (subEl) subEl.textContent = subtitle;
 
-    // Calculate match duration
-    const durationSec = Math.floor((Date.now() - matchStats.startTime) / 1000);
+    // Calculate match duration once and freeze
+    const durationSec = Math.max(0, Math.floor((matchStats.endTime - (matchStats.startTime || matchStats.endTime)) / 1000));
     const mins = Math.floor(durationSec / 60);
     const secs = durationSec % 60;
     const totalShots = matchStats.hits + matchStats.misses;
     const accuracy = totalShots > 0 ? Math.round((matchStats.hits / totalShots) * 100) : 0;
 
-    document.getElementById('statHits').textContent = matchStats.hits;
-    document.getElementById('statMisses').textContent = matchStats.misses;
-    document.getElementById('statAccuracy').textContent = `${accuracy}%`;
-    document.getElementById('statDestroyed').textContent = matchStats.shipsDestroyed;
-    document.getElementById('statDuration').textContent = `${mins}м ${secs}с`;
+    const statHits = document.getElementById('statHits');
+    if (statHits) statHits.textContent = matchStats.hits;
+    const statMisses = document.getElementById('statMisses');
+    if (statMisses) statMisses.textContent = matchStats.misses;
+    const statAcc = document.getElementById('statAccuracy');
+    if (statAcc) statAcc.textContent = `${accuracy}%`;
+    const statDest = document.getElementById('statDestroyed');
+    if (statDest) statDest.textContent = matchStats.shipsDestroyed;
+    const statDur = document.getElementById('statDuration');
+    if (statDur) statDur.textContent = `${mins}м ${secs}с`;
 
     openModal('modalGameOver');
   }
@@ -1294,7 +1393,15 @@
   }
 
   function handleRematch() {
-    closeModal('modalGameOver');
+    closeAllModals();
+    if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
+    if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
+    if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
+    if (onlinePollInterval) { clearInterval(onlinePollInterval); onlinePollInterval = null; }
+
+    const logEl = document.getElementById('combatLogList');
+    if (logEl) logEl.innerHTML = '';
+
     if (gameMode === 'ai') {
       startAiMatch();
     } else {
@@ -1304,11 +1411,21 @@
   }
 
   function leaveCurrentMatch() {
+    closeAllModals();
     setBattleState(BATTLE_STATE.MENU);
-    if (turnTimerId) clearInterval(turnTimerId);
-    if (prepTimerId) clearInterval(prepTimerId);
-    if (stateWatchdogTimer) clearTimeout(stateWatchdogTimer);
-    if (onlinePollInterval) clearInterval(onlinePollInterval);
+    if (turnTimerId) { clearInterval(turnTimerId); turnTimerId = null; }
+    if (prepTimerId) { clearInterval(prepTimerId); prepTimerId = null; }
+    if (stateWatchdogTimer) { clearTimeout(stateWatchdogTimer); stateWatchdogTimer = null; }
+    if (onlinePollInterval) { clearInterval(onlinePollInterval); onlinePollInterval = null; }
+
+    const timerEl = document.getElementById('turnTimerDisplay');
+    if (timerEl) {
+      timerEl.classList.remove('timer-warning');
+      timerEl.textContent = '25с';
+    }
+
+    const logEl = document.getElementById('combatLogList');
+    if (logEl) logEl.innerHTML = '';
 
     if (gameMode === 'online' && currentRoomCode) {
       Online.leaveRoom(currentRoomCode);
