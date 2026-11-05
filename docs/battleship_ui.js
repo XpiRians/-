@@ -1182,11 +1182,24 @@
     }
   }
 
+  function getMyBattleRole(room) {
+    if (!room) return isRoomHost ? 'player1' : 'player2';
+    const pInfo = Online.getPlayerInfo();
+    const myId = String(pInfo.id || '');
+    const myUid = pInfo.user ? String(pInfo.user.id) : null;
+
+    if (myUid && String(room.player1_user_id) === myUid) return 'player1';
+    if (myUid && String(room.player2_user_id) === myUid) return 'player2';
+    if (myId && String(room.player1_id) === myId) return 'player1';
+    if (myId && String(room.player2_id) === myId) return 'player2';
+    return isRoomHost ? 'player1' : 'player2';
+  }
+
   function handleJoinedRoom(room) {
     currentRoomCode = room.code;
     currentRoomIsRanked = Boolean(room.is_ranked);
-    const myId = Online.getPlayerInfo().id;
-    isRoomHost = room.player1_id === myId;
+    const myRole = getMyBattleRole(room);
+    isRoomHost = (myRole === 'player1');
 
     // Update Lobby Mode Badge
     const badge = document.getElementById('lobbyModeBadge');
@@ -1559,13 +1572,18 @@
       }
     } else if (room) {
       currentRoomIsRanked = Boolean(room.is_ranked);
-      const myId = Online.getPlayerInfo().id;
-      const isP1 = room.player1_id === myId;
-      isMyTurn = (room.current_turn === 'player1' && isP1) || (room.current_turn === 'player2' && !isP1);
+      const myRole = getMyBattleRole(room);
+      isRoomHost = (myRole === 'player1');
+      isMyTurn = (room.current_turn === myRole);
       setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
       serverTurnDeadline = room.turn_deadline ? new Date(room.turn_deadline).getTime() : Date.now() + 25000;
       updateTurnStatusUI();
-      if (isMyTurn) unlockPlayerTurn();
+      if (isMyTurn) {
+        unlockPlayerTurn();
+      } else {
+        isShotLocked = true;
+        updateBoardInteractivity();
+      }
     }
 
     renderBattleBoards();
@@ -1642,20 +1660,30 @@
       const res = await Online.handleTimeout(currentRoomCode);
       if (res && res.success) {
         if (res.winner) {
-          endMatch(res.winner === (isRoomHost ? 'player1' : 'player2'), 'Техническое поражение из-за бездействия.');
+          const myRole = isRoomHost ? 'player1' : 'player2';
+          endMatch(res.winner === myRole, 'Техническое поражение из-за бездействия.');
           return;
         }
         if (res.turn_deadline) {
           serverTurnDeadline = new Date(res.turn_deadline).getTime();
         }
-        isMyTurn = res.next_turn === (isRoomHost ? 'player1' : 'player2');
+        const myRole = isRoomHost ? 'player1' : 'player2';
+        isMyTurn = (res.next_turn === myRole);
         setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
         updateTurnStatusUI();
+        if (isMyTurn) {
+          unlockPlayerTurn();
+        } else {
+          isShotLocked = true;
+          updateBoardInteractivity();
+        }
       }
+      const freshRoom = await Online.getRoom(currentRoomCode);
+      if (freshRoom) syncOnlineBattleState(freshRoom);
     } catch (e) {
       console.warn('handleOnlineTimeout error:', e);
     } finally {
-      setTimeout(() => { timeoutInProgress = false; }, 2000);
+      setTimeout(() => { timeoutInProgress = false; }, 1500);
     }
   }
 
@@ -2049,13 +2077,11 @@
           setBattleState(BATTLE_STATE.ONLINE_WAITING);
           isShotLocked = true;
           updateBoardInteractivity();
-        } else {
-          isMyTurn = true;
-          setBattleState(BATTLE_STATE.PLAYER_TURN);
-          unlockPlayerTurn();
         }
-        updateTurnStatusUI();
-        startTurnTimer();
+        try {
+          const fresh = await Online.getRoom(currentRoomCode);
+          if (fresh) syncOnlineBattleState(fresh);
+        } catch (_) {}
         return;
       }
 
@@ -2121,10 +2147,9 @@
     if (currentBattleState === BATTLE_STATE.GAME_OVER) return;
 
     if (room.status === 'finished') {
-      const myId = Online.getPlayerInfo().id;
-      const iWon = (room.winner === 'player1' && room.player1_id === myId) ||
-                   (room.winner === 'player2' && room.player2_id === myId);
-      const oppFleet = isRoomHost ? room.player2_fleet : room.player1_fleet;
+      const myRole = getMyBattleRole(room);
+      const iWon = (room.winner === myRole);
+      const oppFleet = (myRole === 'player1') ? room.player2_fleet : room.player1_fleet;
       if (oppFleet && (!opponentBoard.ships || opponentBoard.ships.length === 0)) {
         opponentBoard.deserializeFleet(oppFleet);
       }
@@ -2139,8 +2164,10 @@
       serverTurnDeadline = new Date(room.turn_deadline).getTime();
     }
 
-    const myRole = isRoomHost ? 'player1' : 'player2';
-    const oppRole = isRoomHost ? 'player2' : 'player1';
+    const myRole = getMyBattleRole(room);
+    const oppRole = (myRole === 'player1') ? 'player2' : 'player1';
+    isRoomHost = (myRole === 'player1');
+    isMyTurn = (room.current_turn === myRole);
 
     // Apply any new incoming shots from history
     const history = room.shots_history || [];
@@ -2189,9 +2216,6 @@
       updateFleetCountersUI();
     }
 
-    const myId = Online.getPlayerInfo().id;
-    const isP1 = room.player1_id === myId;
-    isMyTurn = (room.current_turn === 'player1' && isP1) || (room.current_turn === 'player2' && !isP1);
     setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
     updateTurnStatusUI();
     if (isMyTurn) {

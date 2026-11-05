@@ -707,17 +707,32 @@
         method: 'POST',
         body: JSON.stringify({
           p_room_code: cleanCode,
-          p_player_id: playerId,
-          p_fleet: formattedFleet
+          p_fleet: formattedFleet,
+          p_player_id: playerId
         })
       });
 
       if (res && res.success) {
         const room = await getRoom(cleanCode);
-        return room || res;
+        return room || res.room || res;
       }
     } catch (rpcErr) {
-      console.warn('RPC battleship_submit_placement fallback to direct PATCH:', rpcErr);
+      console.warn('RPC battleship_submit_placement fallback to 2-arg call:', rpcErr);
+      try {
+        const res2 = await apiFetch('rpc/battleship_submit_placement', {
+          method: 'POST',
+          body: JSON.stringify({
+            p_room_code: cleanCode,
+            p_fleet: formattedFleet
+          })
+        });
+        if (res2 && res2.success) {
+          const room = await getRoom(cleanCode);
+          return room || res2.room || res2;
+        }
+      } catch (rpcErr2) {
+        console.warn('RPC battleship_submit_placement fallback to direct PATCH:', rpcErr2);
+      }
     }
 
     // 2. Fallback to direct PATCH
