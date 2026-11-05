@@ -95,6 +95,9 @@
   let matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: 0 };
   let onlinePollInterval = null;
   let onlineAppliedShots = 0;
+  let serverTurnDeadline = null;
+  let timerWarningPlayed = false;
+  let timeoutInProgress = false;
 
   function init() {
     fx = new BattleFX();
@@ -309,6 +312,16 @@
       document.getElementById('placementOpponentName').textContent = oppName || 'Соперник';
       showScreen('placement');
       startRoomPolling();
+    } else if (room.status === 'battle') {
+      // Reconnection during active battle!
+      const oppName = isRoomHost ? room.player2_name : room.player1_name;
+      document.getElementById('placementOpponentName').textContent = oppName || 'Соперник';
+      const myFleet = isRoomHost ? room.player1_fleet : room.player2_fleet;
+      if (myFleet) {
+        playerBoard.deserializeFleet(myFleet);
+      }
+      startBattlePhase(room);
+      startRoomPolling();
     }
   }
 
@@ -322,16 +335,17 @@
 
         if (activeScreen === 'lobby' && room.status === 'placement') {
           handleJoinedRoom(room);
-        } else if (activeScreen === 'placement' && room.status === 'battle') {
-          // Both ready! Start battle!
-          startBattlePhase(room);
+        } else if (activeScreen === 'placement') {
+          if (room.status === 'battle' || (room.player1_ready && room.player2_ready)) {
+            startBattlePhase(room);
+          }
         } else if (activeScreen === 'battle') {
           syncOnlineBattleState(room);
         }
       } catch (e) {
         console.warn('Poll error:', e);
       }
-    }, 1500);
+    }, 1000);
   }
 
   function copyRoomCode() {
@@ -626,6 +640,7 @@
     matchStats = { hits: 0, misses: 0, shipsDestroyed: 0, startTime: Date.now() };
 
     if (gameMode === 'ai') {
+      serverTurnDeadline = null;
       // Random coin flip for who goes first
       isMyTurn = Math.random() < 0.5;
       updateTurnStatusUI();
@@ -640,6 +655,7 @@
       const isP1 = room.player1_id === myId;
       isMyTurn = (room.current_turn === 'player1' && isP1) || (room.current_turn === 'player2' && !isP1);
       setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
+      serverTurnDeadline = room.turn_deadline ? new Date(room.turn_deadline).getTime() : Date.now() + 25000;
       updateTurnStatusUI();
     }
 
@@ -650,28 +666,76 @@
 
   function startTurnTimer() {
     if (turnTimerId) clearInterval(turnTimerId);
-    turnTimeLeft = 25;
-    updateTurnTimerUI();
+    timerWarningPlayed = false;
 
-    turnTimerId = setInterval(() => {
-      turnTimeLeft--;
+    if (gameMode === 'ai') {
+      turnTimeLeft = 25;
       updateTurnTimerUI();
 
-      if (turnTimeLeft === 5) {
-        Audio.playTimerWarning();
-      }
+      turnTimerId = setInterval(() => {
+        turnTimeLeft--;
+        updateTurnTimerUI();
 
-      if (turnTimeLeft <= 0) {
-        handleTurnTimeout();
-      }
-    }, 1000);
+        if (turnTimeLeft === 5) {
+          Audio.playTimerWarning();
+        }
+
+        if (turnTimeLeft <= 0) {
+          handleTurnTimeout();
+        }
+      }, 1000);
+    } else {
+      // Online mode: continuous unified sync with serverTurnDeadline (no drift)
+      const syncTimerTick = () => {
+        if (!serverTurnDeadline) return;
+        const remainingMs = serverTurnDeadline - Date.now();
+        const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+
+        if (remainingSec !== turnTimeLeft) {
+          turnTimeLeft = remainingSec;
+          updateTurnTimerUI();
+        }
+
+        if (remainingSec === 5 && !timerWarningPlayed) {
+          timerWarningPlayed = true;
+          Audio.playTimerWarning();
+        } else if (remainingSec > 5) {
+          timerWarningPlayed = false;
+        }
+
+        if (remainingMs <= 0 && isMyTurn) {
+          handleOnlineTimeout();
+        }
+      };
+
+      syncTimerTick();
+      turnTimerId = setInterval(syncTimerTick, 250);
+    }
   }
 
-  function updateTurnTimerUI() {
-    const el = document.getElementById('turnTimerDisplay');
-    if (el) {
-      el.textContent = `${turnTimeLeft}с`;
-      el.classList.toggle('timer-warning', turnTimeLeft <= 5);
+  async function handleOnlineTimeout() {
+    if (timeoutInProgress || currentBattleState === BATTLE_STATE.GAME_OVER) return;
+    timeoutInProgress = true;
+
+    try {
+      showToast('⏳ Время хода истекло!');
+      const res = await Online.handleTimeout(currentRoomCode);
+      if (res && res.success) {
+        if (res.winner) {
+          endMatch(res.winner === (isRoomHost ? 'player1' : 'player2'), 'Техническое поражение из-за бездействия.');
+          return;
+        }
+        if (res.turn_deadline) {
+          serverTurnDeadline = new Date(res.turn_deadline).getTime();
+        }
+        isMyTurn = res.next_turn === (isRoomHost ? 'player1' : 'player2');
+        setBattleState(isMyTurn ? BATTLE_STATE.PLAYER_TURN : BATTLE_STATE.ONLINE_WAITING);
+        updateTurnStatusUI();
+      }
+    } catch (e) {
+      console.warn('handleOnlineTimeout error:', e);
+    } finally {
+      setTimeout(() => { timeoutInProgress = false; }, 2000);
     }
   }
 
@@ -1038,6 +1102,11 @@
 
       onlineAppliedShots++; // Track our fired shot
 
+      // Update server deadline immediately from response
+      if (res.turn_deadline) {
+        serverTurnDeadline = new Date(res.turn_deadline).getTime();
+      }
+
       if (res.result === 'hit' || res.result === 'sunk') {
         matchStats.hits++;
         Audio.playExplosionHit();
@@ -1094,6 +1163,11 @@
     }
 
     if (room.status !== 'battle') return;
+
+    // Sync turn deadline with server authority
+    if (room.turn_deadline) {
+      serverTurnDeadline = new Date(room.turn_deadline).getTime();
+    }
 
     const myRole = isRoomHost ? 'player1' : 'player2';
     const oppRole = isRoomHost ? 'player2' : 'player1';
