@@ -114,8 +114,8 @@
   let unplacedFleet = [];
 
   // Match State & Modes
-  let currentRoomIsRanked = false;
-  let currentLobbyMode = 'casual'; // 'casual' | 'ranked'
+  let currentRoomIsRanked = true;
+  let currentLobbyMode = 'ranked'; // Все матчи - только сетевые бои на Эло
   let selectedAvatarSeed = 'Admiral';
   let leaderboardCurrentPage = 1;
   const LEADERBOARD_PAGE_SIZE = 15;
@@ -733,26 +733,12 @@
         nameInput.value = Online.getPlayerInfo().name || 'Адмирал';
       }
       if (quickEditBtn) quickEditBtn.style.display = 'none';
-      setLobbyMode('casual');
+      setLobbyMode('ranked');
     }
   }
 
-  function setLobbyMode(mode) {
-    if (mode === 'ranked') {
-      const pInfo = Online.getPlayerInfo();
-      if (!pInfo.isAuth) {
-        openAuthModal('login');
-        showToast('Для рейтинговой игры необходимо войти в аккаунт капитана', 'error');
-        return;
-      }
-      if (!pInfo.profile || !pInfo.profile.username) {
-        openProfileSetupModal();
-        return;
-      }
-      currentLobbyMode = 'ranked';
-    } else {
-      currentLobbyMode = 'casual';
-    }
+  function setLobbyMode(mode = 'ranked') {
+    currentLobbyMode = 'ranked';
 
     const tabCas = document.getElementById('tabCasual');
     const tabRnk = document.getElementById('tabRanked');
@@ -763,25 +749,14 @@
     const quickDesc = document.getElementById('quickPlayDesc');
     const quickIcon = document.getElementById('quickPlayIcon');
 
-    if (currentLobbyMode === 'ranked') {
-      if (tabCas) tabCas.classList.remove('active');
-      if (tabRnk) tabRnk.classList.add('active');
-      if (banner) banner.className = 'active-mode-banner ranked';
-      if (bannerIcon) bannerIcon.textContent = '⚔️';
-      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Рейтинговый бой</strong> — матч за очки ELO (K=32), победы идут в Зал славы.';
-      if (quickTitle) quickTitle.textContent = 'Рейтинговый подбор';
-      if (quickDesc) quickDesc.textContent = 'Случайный подбор равного по рангу капитана';
-      if (quickIcon) quickIcon.textContent = '⚔️';
-    } else {
-      if (tabCas) tabCas.classList.add('active');
-      if (tabRnk) tabRnk.classList.remove('active');
-      if (banner) banner.className = 'active-mode-banner casual';
-      if (bannerIcon) bannerIcon.textContent = '🛡️';
-      if (bannerText) bannerText.innerHTML = 'Режим: <strong>Обычный бой</strong> — свободная игра без риска для рейтинга.';
-      if (quickTitle) quickTitle.textContent = 'Быстрая игра онлайн';
-      if (quickDesc) quickDesc.textContent = 'Мгновенный подбор случайного соперника';
-      if (quickIcon) quickIcon.textContent = '⚡';
-    }
+    if (tabCas) tabCas.style.display = 'none';
+    if (tabRnk) tabRnk.classList.add('active');
+    if (banner) banner.className = 'active-mode-banner ranked';
+    if (bannerIcon) bannerIcon.textContent = '⚔️';
+    if (bannerText) bannerText.innerHTML = 'Режим: <strong>Бои на Эло</strong> — сетевые дуэли против реальных игроков за очки рейтинга ELO (K=32).';
+    if (quickTitle) quickTitle.textContent = 'Быстрый матч';
+    if (quickDesc) quickDesc.textContent = 'Мгновенный подбор реального игрока на Эло';
+    if (quickIcon) quickIcon.textContent = '⚡';
   }
 
   function openProfileSetupModal() {
@@ -1024,15 +999,15 @@
     const pInfo = Online.getPlayerInfo();
     if (!pInfo.isAuth) {
       openAuthModal('login');
-      showToast('Для участия в онлайн-игре необходимо войти в аккаунт капитана', 'error');
+      showToast('Для участия в сетевых боях на Эло необходимо войти в аккаунт капитана', 'error');
       return;
     }
     if (!pInfo.profile || !pInfo.profile.username) {
       openProfileSetupModal();
       return;
     }
-    const isRanked = (currentLobbyMode === 'ranked');
-    showToast(isRanked ? 'Поиск рейтингового соперника...' : 'Поиск открытой комнаты...');
+    const isRanked = true; // Всегда бой на Эло против реального игрока
+    showToast('Поиск соперника на Эло...');
     try {
       const room = await Online.quickMatch(isRanked);
       handleJoinedRoom(room);
@@ -1046,14 +1021,14 @@
     const pInfo = Online.getPlayerInfo();
     if (!pInfo.isAuth) {
       openAuthModal('login');
-      showToast('Для создания онлайн-комнаты необходимо войти в аккаунт капитана', 'error');
+      showToast('Для создания комнаты на Эло необходимо войти в аккаунт капитана', 'error');
       return;
     }
     if (!pInfo.profile || !pInfo.profile.username) {
       openProfileSetupModal();
       return;
     }
-    const isRanked = (currentLobbyMode === 'ranked');
+    const isRanked = true; // Всегда бой на Эло против реального игрока
     try {
       const room = await Online.createRoom(isRanked);
       handleJoinedRoom(room);

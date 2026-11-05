@@ -3,48 +3,205 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Политика конфиденциальности — Battleship Online</title>
+  <title>Политика конфиденциальности — Галерея Муси и Кети: Морской бой</title>
+  <meta name="description" content="Политика конфиденциальности проекта Галерея Муси и Кети и игры Морской бой.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
   <style>
+    :root {
+      --bg: #070b13;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-gold: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      line-height: 1.6;
-      color: #e6edf3;
-      background: #0d1117;
-      max-width: 800px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.7;
+      padding: 0;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      color: var(--accent-gold);
+      font-weight: 800;
+      font-size: 18px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 16px;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+    .content-wrap {
+      max-width: 860px;
       margin: 40px auto;
       padding: 0 20px;
+      flex: 1;
     }
-    h1, h2 { color: #58a6ff; }
-    a { color: #58a6ff; }
     .card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    h1 {
+      color: var(--accent-gold);
+      font-size: 28px;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 14px;
+    }
+    h2 {
+      color: var(--accent);
+      font-size: 19px;
+      margin: 28px 0 12px;
+    }
+    p, ul {
+      margin-bottom: 14px;
+      color: #cbd5e1;
+      font-size: 15px;
+    }
+    ul {
+      margin-left: 24px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 24px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      background: #090d16;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Политика конфиденциальности</h1>
-    <p>Дата вступления в силу: 5 ноября 2026 г.</p>
-    
-    <h2>1. Сбор информации</h2>
-    <p>Игра Battleship (Морской бой) использует Google OAuth для аутентификации игроков. Мы запрашиваем только базовые общедоступные данные профиля: ваше имя (для игрового позывного), аватар и адрес электронной почты.</p>
 
-    <h2>2. Использование данных</h2>
-    <p>Собранные данные используются исключительно для:</p>
-    <ul>
-      <li>Создания игрового профиля и сохранения позывного капитана;</li>
-      <li>Фиксации рейтинга ELO и отображения в Зале славы;</li>
-      <li>Синхронизации онлайн-матчей между игроками.</li>
-    </ul>
+  <header>
+    <div class="header-inner">
+      <a href="index.html" class="logo">🐾 Галерея Муси и Кети</a>
+      <nav class="nav-links">
+        <a href="index.html">Галерея</a>
+        <a href="explore.html">Каталог</a>
+        <a href="farm.html">Мяуцвет</a>
+        <a href="battleship.html">Морской бой ⚓</a>
+        <a href="about.html">О проекте</a>
+      </nav>
+    </div>
+  </header>
 
-    <h2>3. Защита и передача информации</h2>
-    <p>Мы не передаём ваши данные третьим лицам, не используем их в коммерческих целях и не рассылаем спам. Вся авторизация и хранение осуществляются через безопасную инфраструктуру Supabase.</p>
+  <main class="content-wrap">
+    <div class="card">
+      <h1>Политика конфиденциальности</h1>
+      <div class="subtitle">Дата редакции: 5 ноября 2026 г. • Проект «Галерея Муси и Кети»</div>
+      
+      <h2>1. Какую информацию мы обрабатываем</h2>
+      <p>
+        В проекте «Галерея Муси и Кети» и сетевой игре «Морской бой: Бои на Эло» мы собираем минимальный набор данных, 
+        необходимый исключительно для авторизации и ведения игрового рейтинга:
+      </p>
+      <ul>
+        <li>Адрес электронной почты (для регистрации, входа и восстановления пароля);</li>
+        <li>Игровой боевой позывной и выбранный аватар (для отображения в лобби и Зале славы);</li>
+        <li>Игровую статистику (рейтинг ELO, количество побед, поражений, сыгранных матчей).</li>
+      </ul>
 
-    <h2>4. Контакты</h2>
-    <p>По любым вопросам вы можете обратиться к разработчику по электронной почте: poozitiv06@gmail.com</p>
-  </div>
+      <h2>2. Цели использования данных</h2>
+      <p>Собранные данные используются исключительно для:</p>
+      <ul>
+        <li>Создания и поддержания учётной записи капитана;</li>
+        <li>Авторизации и защиты от несанкционированного доступа;</li>
+        <li>Синхронизации сетевых дуэлей между реальными игроками;</li>
+        <li>Подсчёта и публичного отображения рейтинга ELO в Зале славы.</li>
+      </ul>
+
+      <h2>3. Безопасность и хранение данных</h2>
+      <p>
+        Мы не продаём, не передаём ваши персональные данные третьим лицам и не занимаемся рекламными рассылками. 
+        Хранение данных и аутентификация производятся с использованием защищённой облачной базы данных Supabase (SSL/TLS шифрование). 
+        Пароли хранятся исключительно в зашифрованном криптографическом виде (хэш) и недоступны даже разработчикам сайта.
+      </p>
+
+      <h2>4. Права пользователя и удаление аккаунта</h2>
+      <p>
+        Вы вправе запросить удаление своего аккаунта и всей связанной с ним игровой истории в любой момент. 
+        Для этого направьте запрос на контактный email.
+      </p>
+
+      <h2>5. Контакты</h2>
+      <p>
+        По всем вопросам конфиденциальности и обработки данных обращайтесь: 
+        <a href="mailto:poozitiv06@gmail.com" style="color: var(--accent);">poozitiv06@gmail.com</a>
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>Галерея Муси и Кети © 2026. The Infinite Archive</div>
+      <div style="display: flex; gap: 16px;">
+        <a href="terms.html">Пользовательское соглашение</a>
+        <a href="privacy.html">Политика конфиденциальности</a>
+        <a href="battleship.html">Морской бой ⚓</a>
+      </div>
+    </div>
+  </footer>
+
 </body>
 </html>

@@ -96,6 +96,7 @@ ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS games_played INT DEFA
 ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS casual_wins INT DEFAULT 0;
 ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS casual_losses INT DEFAULT 0;
 ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS casual_games_played INT DEFAULT 0;
+ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 ALTER TABLE public.player_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
 
 CREATE INDEX IF NOT EXISTS idx_player_ratings_rating_desc 
