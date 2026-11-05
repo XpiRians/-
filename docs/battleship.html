@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INFINITE GALLERY: BATTLESHIP — Морской бой</title>
+  <meta name="description" content="Морской бой онлайн в Бесконечной Галерее: дуэли 1v1, лобби, умный ИИ, анимации выстрелов и взрывов.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="battleship.css">
+</head>
+<body class="battleship-body">
+
+  <!-- Header Navigation -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo-group">
+        <span class="logo-symbol">⚓</span>
+        <div class="logo-text-wrap">
+          <span class="logo-title">Морской бой</span>
+          <span class="logo-badge">PvP & AI</span>
+        </div>
+      </a>
+      <div class="header-nav-group">
+        <nav class="site-nav">
+          <a href="index.html" class="nav-link">Галерея</a>
+          <a href="explore.html" class="nav-link">Каталог</a>
+          <a href="farm.html" class="nav-link">Мяуцвет</a>
+          <a href="battleship.html" class="nav-link active">Морской бой ⚓</a>
+          <a href="about.html" class="nav-link">О проекте</a>
+        </nav>
+        <button id="btnToggleSound" class="sound-toggle-btn" type="button" title="Включить / выключить звук">🔊</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Fullscreen Particle FX Canvas -->
+  <canvas id="battleFxCanvas" class="battle-fx-canvas"></canvas>
+
+  <main class="battleship-main">
+
+    <!-- ================================================================= -->
+    <!-- SCREEN 1: MAIN MENU                                               -->
+    <!-- ================================================================= -->
+    <section id="screen-menu" class="screen-container active">
+      <div class="menu-hero-card">
+        <div class="menu-radar-decor"></div>
+        <div class="menu-badge">ТАКТИЧЕСКИЙ МОРСКОЙ РЕЖИМ</div>
+        <h1 class="menu-title">INFINITE GALLERY: BATTLESHIP</h1>
+        <p class="menu-subtitle">Классический морской бой с живыми дуэлями, умным ИИ, анимацией снарядов и синхронизацией ходов</p>
+
+        <!-- Player Nickname Box -->
+        <div class="player-nickname-box">
+          <span class="nickname-label">Позывной капитана:</span>
+          <div class="nickname-input-wrap">
+            <span class="nickname-icon">🎖️</span>
+            <input type="text" id="playerNameInput" maxlength="20" value="Адмирал" placeholder="Введите позывной...">
+          </div>
+        </div>
+
+        <!-- Menu Action Buttons Grid -->
+        <div class="menu-actions-grid">
+          <button id="btnPlayAi" class="menu-action-btn primary" type="button">
+            <span class="btn-icon">🤖</span>
+            <div class="btn-text-wrap">
+              <strong>Одиночная игра (ИИ)</strong>
+              <span>Тренировка против умного Адмирала Мяу</span>
+            </div>
+          </button>
+
+          <button id="btnQuickPlay" class="menu-action-btn" type="button">
+            <span class="btn-icon">⚡</span>
+            <div class="btn-text-wrap">
+              <strong>Быстрая игра онлайн</strong>
+              <span>Мгновенный подбор случайного соперника</span>
+            </div>
+          </button>
+
+          <button id="btnCreateRoom" class="menu-action-btn" type="button">
+            <span class="btn-icon">🏰</span>
+            <div class="btn-text-wrap">
+              <strong>Создать комнату</strong>
+              <span>Сгенерировать код для приглашения друга</span>
+            </div>
+          </button>
+
+          <button id="btnBrowseRooms" class="menu-action-btn" type="button">
+            <span class="btn-icon">🔍</span>
+            <div class="btn-text-wrap">
+              <strong>Найти комнату</strong>
+              <span>Список открытых онлайн-сражений</span>
+            </div>
+          </button>
+
+          <button id="btnJoinCode" class="menu-action-btn" type="button">
+            <span class="btn-icon">🔑</span>
+            <div class="btn-text-wrap">
+              <strong>Ввести код</strong>
+              <span>Присоединиться по 6-значному коду друга</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SCREEN 2: LOBBY (WAITING ROOM)                                    -->
+    <!-- ================================================================= -->
+    <section id="screen-lobby" class="screen-container" style="display: none;">
+      <div class="lobby-card">
+        <div class="lobby-header">
+          <h2>Комната ожидания боя</h2>
+          <div class="room-code-banner">
+            <span>КОД КОМНАТЫ:</span>
+            <strong id="lobbyRoomCodeText">SEA000</strong>
+            <button id="btnCopyRoomCode" class="btn btn-secondary btn-sm" type="button">📋 Скопировать</button>
+          </div>
+        </div>
+
+        <div class="lobby-players-row">
+          <div class="lobby-player-box left">
+            <div class="lobby-avatar">👨‍✈️</div>
+            <strong id="lobbyP1Name" class="lobby-pname">Адмирал</strong>
+            <span class="lobby-pstatus ready">Готов к расстановке</span>
+          </div>
+
+          <div class="lobby-vs-badge">VS</div>
+
+          <div class="lobby-player-box right">
+            <div class="lobby-avatar waiting">⏳</div>
+            <strong id="lobbyP2Name" class="lobby-pname">Ожидание соперника...</strong>
+            <span class="lobby-pstatus">Подключение...</span>
+          </div>
+        </div>
+
+        <div class="lobby-footer">
+          <button id="btnLeaveLobby" class="btn btn-secondary" type="button">✕ Выйти из комнаты</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SCREEN 3: SHIP PLACEMENT PHASE                                    -->
+    <!-- ================================================================= -->
+    <section id="screen-placement" class="screen-container" style="display: none;">
+      <div class="placement-layout">
+        
+        <!-- Header & Rules -->
+        <div class="placement-header-bar">
+          <div class="placement-header-info">
+            <h2>Расстановка флота</h2>
+            <p>Разместите 10 кораблей. Корабли не могут соприкасаться даже углами!</p>
+          </div>
+          <div class="placement-header-actions">
+            <div class="placement-timer-wrap">
+              <span>Время:</span>
+              <strong id="placementTimer">02:00</strong>
+            </div>
+            <span class="opp-badge">Противник: <strong id="placementOpponentName">Адмирал Мяу</strong></span>
+          </div>
+        </div>
+
+        <div class="placement-content-row">
+          <!-- 10x10 Placement Grid -->
+          <div class="placement-board-wrap">
+            <div class="grid-col-headers">
+              <span></span>
+              <span>А</span><span>Б</span><span>В</span><span>Г</span><span>Д</span>
+              <span>Е</span><span>Ж</span><span>З</span><span>И</span><span>К</span>
+            </div>
+            <div class="grid-row-with-numbers">
+              <div class="grid-row-headers">
+                <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+              </div>
+              <div id="placementGrid" class="naval-grid"></div>
+            </div>
+          </div>
+
+          <!-- Ship Dock & Controls Sidebar -->
+          <div class="placement-sidebar">
+            <div class="sidebar-block">
+              <div class="sidebar-title">Эскадра в доке</div>
+              <div id="shipDockList" class="dock-list"></div>
+            </div>
+
+            <div class="sidebar-block actions">
+              <button id="btnRotateShip" class="btn btn-secondary btn-block" type="button">🔁 Направление: Горизонтально</button>
+              <div class="quick-tools-row">
+                <button id="btnAutoPlace" class="btn btn-secondary" type="button" title="Случайная расстановка всего флота">🎲 Авто</button>
+                <button id="btnClearFleet" class="btn btn-secondary" type="button" title="Очистить все корабли">🔄 Очистить</button>
+              </div>
+              <button id="btnReadyBattle" class="btn btn-primary btn-block ready-btn" type="button" disabled>✅ Готов к бою</button>
+              <button id="btnPlacementLeave" class="btn btn-subtle btn-block" type="button">Выйти</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- SCREEN 4: BATTLE ARENA                                            -->
+    <!-- ================================================================= -->
+    <section id="screen-battle" class="screen-container" style="display: none;">
+      <div class="battle-arena-layout">
+
+        <!-- Battle Top HUD -->
+        <div class="battle-top-hud">
+          <!-- Left: My Fleet Status -->
+          <div class="hud-fleet-card my-fleet-status">
+            <div class="hud-fleet-title">🛡️ ВАШ ФЛОТ</div>
+            <div class="fleet-indicators-row">
+              <span title="Линкор (4)"><span class="ship-mini-icon">🚢</span><strong id="myShips4">1</strong></span>
+              <span title="Крейсера (3)"><span class="ship-mini-icon">🛥️</span><strong id="myShips3">2</strong></span>
+              <span title="Эсминцы (2)"><span class="ship-mini-icon">⛵</span><strong id="myShips2">3</strong></span>
+              <span title="Катера (1)"><span class="ship-mini-icon">🚤</span><strong id="myShips1">4</strong></span>
+            </div>
+          </div>
+
+          <!-- Center: Turn Status & Timer -->
+          <div class="hud-center-status">
+            <div id="turnBadge" class="turn-badge turn-my">🎯 ВАШ ХОД</div>
+            <div id="turnTimerDisplay" class="turn-timer">25с</div>
+            <div id="turnStatusText" class="turn-subtext">Выберите клетку на поле противника</div>
+          </div>
+
+          <!-- Right: Enemy Fleet Status -->
+          <div class="hud-fleet-card opp-fleet-status">
+            <div class="hud-fleet-title">🎯 ФЛОТ ВРАГА</div>
+            <div class="fleet-indicators-row">
+              <span title="Линкор (4)"><span class="ship-mini-icon">🚢</span><strong id="oppShips4">1</strong></span>
+              <span title="Крейсера (3)"><span class="ship-mini-icon">🛥️</span><strong id="oppShips3">2</strong></span>
+              <span title="Эсминцы (2)"><span class="ship-mini-icon">⛵</span><strong id="oppShips2">3</strong></span>
+              <span title="Катера (1)"><span class="ship-mini-icon">🚤</span><strong id="oppShips1">4</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual 10x10 Boards Grid -->
+        <div class="battle-boards-row">
+          
+          <!-- Board 1: Your Fleet -->
+          <div class="board-column my-board-col">
+            <div class="board-caption">
+              <span class="board-tag">ТВОЁ ПОЛЕ</span>
+              <span class="board-sub">Ваши корабли и попадания противника</span>
+            </div>
+            <div class="board-with-coords">
+              <div class="grid-col-headers">
+                <span></span>
+                <span>А</span><span>Б</span><span>В</span><span>Г</span><span>Д</span>
+                <span>Е</span><span>Ж</span><span>З</span><span>И</span><span>К</span>
+              </div>
+              <div class="grid-row-with-numbers">
+                <div class="grid-row-headers">
+                  <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                  <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                </div>
+                <div id="myFleetBoardGrid" class="naval-grid battle-grid fleet-grid"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Board 2: Opponent Radar (Fog of War) -->
+          <div class="board-column opp-board-col">
+            <div class="board-caption">
+              <span class="board-tag target">ПОЛЕ ПРОТИВНИКА</span>
+              <span class="board-sub">Нажмите для артиллерийского залпа</span>
+            </div>
+            <div class="board-with-coords">
+              <div class="grid-col-headers">
+                <span></span>
+                <span>А</span><span>Б</span><span>В</span><span>Г</span><span>Д</span>
+                <span>Е</span><span>Ж</span><span>З</span><span>И</span><span>К</span>
+              </div>
+              <div class="grid-row-with-numbers">
+                <div class="grid-row-headers">
+                  <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                  <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                </div>
+                <div id="oppRadarBoardGrid" class="naval-grid battle-grid radar-grid"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Combat Log Ticker -->
+        <div class="battle-combat-log">
+          <div class="log-header">ТАКТИЧЕСКИЙ ЖУРНАЛ СРАЖЕНИЯ</div>
+          <div id="combatLogList" class="log-entries"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =================================================================== -->
+  <!-- MODALS & OVERLAYS                                                   -->
+  <!-- =================================================================== -->
+
+  <!-- Battle Intro Overlay -->
+  <div id="battleIntroOverlay" class="intro-overlay" style="display: none;">
+    <div class="intro-content">
+      <div class="intro-sub">ПОДГОТОВКА ЗАВЕРШЕНА</div>
+      <h1 class="intro-title">СРАЖЕНИЕ НАЧИНАЕТСЯ!</h1>
+      <div class="intro-vs">
+        <span>ВЫ</span>
+        <strong>VS</strong>
+        <span id="introOpponentLabel">ПРОТИВНИК</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="modalGameOver" class="modal-overlay">
+    <div class="modal-card gameover-card">
+      <div class="gameover-banner">
+        <h2 id="modalGameOverTitle" class="gameover-title victory">🏆 ПОБЕДА!</h2>
+        <p id="modalGameOverSubtitle" class="gameover-sub">Все вражеские корабли уничтожены!</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="gameover-stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="statHits">0</div>
+          <div class="stat-lbl">Попаданий</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statMisses">0</div>
+          <div class="stat-lbl">Промахов</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statAccuracy">0%</div>
+          <div class="stat-lbl">Точность</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statDestroyed">0</div>
+          <div class="stat-lbl">Потоплено</div>
+        </div>
+        <div class="stat-card full-width">
+          <div class="stat-num" id="statDuration">0м 0с</div>
+          <div class="stat-lbl">Время боя</div>
+        </div>
+      </div>
+
+      <div class="gameover-actions">
+        <button id="btnRematch" class="btn btn-primary" type="button">🔄 Сыграть реванш</button>
+        <button id="btnReturnMenu" class="btn btn-secondary" type="button">🏠 Главное меню</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Code Modal -->
+  <div id="modalJoinCode" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Ввести код комнаты</h3>
+        <button id="btnModalCloseJoin" class="modal-close" type="button">✕</button>
+      </div>
+      <p class="modal-desc">Введите 6-значный буквенно-цифровой код комнаты друга:</p>
+      <input type="text" id="inputJoinRoomCode" class="modal-input" placeholder="Например: SEA492" maxlength="8">
+      <div class="modal-actions">
+        <button id="btnConfirmJoinCode" class="btn btn-primary btn-block" type="button">Подключиться к бою</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Browse Rooms Modal -->
+  <div id="modalRoomsList" class="modal-overlay">
+    <div class="modal-card rooms-list-modal">
+      <div class="modal-header">
+        <h3>Открытые комнаты</h3>
+        <button id="btnModalCloseRooms" class="modal-close" type="button">✕</button>
+      </div>
+      <div id="roomsListContainer" class="rooms-container"></div>
+      <div class="modal-actions">
+        <button id="btnRefreshRooms" class="btn btn-secondary btn-block" type="button">🔄 Обновить список</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="gameToast" class="game-toast"></div>
+
+  <!-- Scripts -->
+  <script src="battleship_core.js"></script>
+  <script src="battleship_audio.js"></script>
+  <script src="battleship_ai.js"></script>
+  <script src="battleship_render.js"></script>
+  <script src="battleship_online.js"></script>
+  <script src="battleship_ui.js"></script>
+</body>
+</html>
